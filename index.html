@@ -17,7 +17,7 @@
     .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
     .header h1 { font-size: 1.25rem; letter-spacing: 1px; color: #ffffff; font-weight: 800; }
     
-    /* Option 3: Pulsing Live Badge */
+    /* Pulsing Live Badge */
     .bot-badge { background: #13272d; color: #38ef7d; border: 1px solid #1c4538; font-size: 0.7rem; font-weight: 700; padding: 6px 12px; border-radius: 20px; display: flex; align-items: center; gap: 6px; }
     .dot { width: 6px; height: 6px; background-color: #38ef7d; border-radius: 50%; box-shadow: 0 0 0 rgba(56, 239, 125, 0.4); animation: pulse 2s infinite; }
     @keyframes pulse {
@@ -40,7 +40,7 @@
       text-align: center;
     }
 
-    /* Option 1: Live Activity Feed Ticker Box */
+    /* Live Activity Feed Ticker Box */
     .activity-ticker {
       background: #0f172a;
       border: 1px solid #1e293b;
@@ -69,7 +69,7 @@
     .section-title-sub { font-size: 0.65rem; color: #f43f5e; font-weight: 700; text-transform: uppercase; }
     .section-title { font-size: 1.05rem; font-weight: 700; color: #ffffff; }
     
-    /* Option 4: Countdown timer tag */
+    /* Countdown timer tag */
     .live-tag { background: #1e293b; color: #94a3b8; font-size: 0.65rem; font-weight: 700; padding: 4px 8px; border-radius: 12px; border: 1px solid #334155; }
 
     .radar-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; max-height: 420px; overflow-y: auto; padding-right: 4px; }
@@ -112,7 +112,7 @@
     🔔 ENABLE BROWSER SIGNAL NOTIFICATIONS
   </button>
 
-  <!-- Option 1: Live Activity Feed Ticker -->
+  <!-- Live Activity Feed Ticker -->
   <div class="activity-ticker" id="activity-ticker">
     <span>[SYSTEM]:</span> Initializing 63 market websocket streams...
   </div>
@@ -129,7 +129,7 @@
       <div class="section-title-sub">MARKET RADAR / LIVE FEED</div>
       <div class="section-title">Setups in motion</div>
     </div>
-    <!-- Option 4: Countdown Refresh Tag -->
+    <!-- Countdown Refresh Tag -->
     <div class="live-tag" id="refresh-timer">REFRESH: 30s</div>
   </div>
 
@@ -263,8 +263,9 @@
 
         if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
           const emoji = type === "BUY" ? "🟢" : "🔴";
-          const msg = `🚨 *A.P.A. ${type} SIGNAL* ${emoji}\n\n*Market:* ${name}\n*Status:* BREAKOUT (${percent}%)\n\n🎯 *Entry:* \`${entry}\`\n🎯 *Take Profit:* \`${tp}\`\n🛡️ *Stop Loss:* \`${sl}\`\n\n*Action:* Check Chart Now`;
-          fetch(`https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(msg)}&parse_mode=Markdown`).catch(()=>{});
+          const msg = `🚨 A.P.A. ${type} SIGNAL ${emoji}\n\nMarket: ${name}\nStatus: BREAKOUT (${percent}%)\n\nEntry: ${entry}\nTake Profit: ${tp}\nStop Loss: ${sl}\n\nAction: Check Chart Now`;
+          
+          fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(msg)}`).catch(()=>{});
         }
       }
     }
@@ -402,7 +403,7 @@
       });
     }
 
-    // COUNTDOWN & FORCE REFRESH (Options 4)
+    // COUNTDOWN & FORCE REFRESH
     let timeLeft = 30;
     setInterval(() => {
       timeLeft--;
