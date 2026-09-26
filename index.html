@@ -340,7 +340,25 @@
 
     initWebSocket();
 
-    // FORCE REFRESH: Every 30 seconds, this re-requests fresh history data for all 63 markets to guarantee active updates
+    // WAKE LOCK: Keeps device/screen awake so the WebSocket connection doesn't sleep
+    if ('wakeLock' in navigator) {
+      let wakeLock = null;
+      const requestWakeLock = async () => {
+        try {
+          wakeLock = await navigator.wakeLock.request('screen');
+        } catch (err) {
+          console.log(`${err.name}, ${err.message}`);
+        }
+      };
+      requestWakeLock();
+      document.addEventListener('visibilitychange', async () => {
+        if (wakeLock !== null && document.visibilityState === 'visible') {
+          await requestWakeLock();
+        }
+      });
+    }
+
+    // FORCE REFRESH: Every 30 seconds, this re-requests fresh history data for all 63 markets
     setInterval(() => {
       if (ws && ws.readyState === WebSocket.OPEN) {
         MARKETS.forEach(m => {
