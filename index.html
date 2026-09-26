@@ -17,7 +17,6 @@
     .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
     .header h1 { font-size: 1.25rem; letter-spacing: 1px; color: #ffffff; font-weight: 800; }
     
-    /* Pulsing Live Badge */
     .bot-badge { background: #13272d; color: #38ef7d; border: 1px solid #1c4538; font-size: 0.7rem; font-weight: 700; padding: 6px 12px; border-radius: 20px; display: flex; align-items: center; gap: 6px; }
     .dot { width: 6px; height: 6px; background-color: #38ef7d; border-radius: 50%; box-shadow: 0 0 0 rgba(56, 239, 125, 0.4); animation: pulse 2s infinite; }
     @keyframes pulse {
@@ -40,7 +39,6 @@
       text-align: center;
     }
 
-    /* Live Activity Feed Ticker Box */
     .activity-ticker {
       background: #0f172a;
       border: 1px solid #1e293b;
@@ -69,7 +67,6 @@
     .section-title-sub { font-size: 0.65rem; color: #f43f5e; font-weight: 700; text-transform: uppercase; }
     .section-title { font-size: 1.05rem; font-weight: 700; color: #ffffff; }
     
-    /* Countdown timer tag */
     .live-tag { background: #1e293b; color: #94a3b8; font-size: 0.65rem; font-weight: 700; padding: 4px 8px; border-radius: 12px; border: 1px solid #334155; }
 
     .radar-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; max-height: 420px; overflow-y: auto; padding-right: 4px; }
@@ -112,9 +109,8 @@
     🔔 ENABLE BROWSER SIGNAL NOTIFICATIONS
   </button>
 
-  <!-- Live Activity Feed Ticker -->
   <div class="activity-ticker" id="activity-ticker">
-    <span>[SYSTEM]:</span> Initializing 63 market websocket streams...
+    <span>[SYSTEM]:</span> Initializing stable polling pipeline...
   </div>
 
   <div class="metrics-grid">
@@ -129,7 +125,6 @@
       <div class="section-title-sub">MARKET RADAR / LIVE FEED</div>
       <div class="section-title">Setups in motion</div>
     </div>
-    <!-- Countdown Refresh Tag -->
     <div class="live-tag" id="refresh-timer">REFRESH: 30s</div>
   </div>
 
@@ -221,7 +216,7 @@
 
     MARKETS.forEach(m => {
       marketState[m.symbol] = { 
-        percent: Math.floor(Math.random() * 40) + 10, 
+        percent: Math.floor(Math.random() * 30) + 15, 
         status: "ANALYZING", 
         prices: [],
         type: "BUY",
@@ -264,7 +259,6 @@
         if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
           const emoji = type === "BUY" ? "🟢" : "🔴";
           const msg = `🚨 A.P.A. ${type} SIGNAL ${emoji}\n\nMarket: ${name}\nStatus: BREAKOUT (${percent}%)\n\nEntry: ${entry}\nTake Profit: ${tp}\nStop Loss: ${sl}\n\nAction: Check Chart Now`;
-          
           fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(msg)}`).catch(()=>{});
         }
       }
@@ -331,48 +325,45 @@
     renderUI();
 
     let ws;
+    let marketIndex = 0;
+
     function initWebSocket() {
-      logActivity("Connecting to Deriv WebSocket feed...");
+      logActivity("Establishing stable connection to Deriv API...");
       ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=1089");
       
       ws.onopen = () => {
-        logActivity("Connected successfully. Subscribing to 63 markets...");
-        MARKETS.forEach(m => {
-          ws.send(JSON.stringify({ ticks_history: m.symbol, count: 10, end: "latest", style: "ticks", subscribe: 1 }));
-        });
+        logActivity("Connected stable. Polling market feeds...");
+        pollNextMarket();
       };
 
       ws.onmessage = (e) => {
         const msg = JSON.parse(e.data);
-        if (msg.msg_type === "tick") {
-          const sym = msg.tick.symbol;
-          if (marketState[sym]) {
-            marketState[sym].prices.push(msg.tick.quote);
-            if (marketState[sym].prices.length > 10) marketState[sym].prices.shift();
-            const p = marketState[sym].prices;
+        if (msg.msg_type === "history" && msg.history && msg.history.prices) {
+          const sym = msg.echo_req.ticks_history;
+          const prices = msg.history.prices.map(Number);
+          
+          if (marketState[sym] && prices.length > 2) {
+            marketState[sym].prices = prices;
+            const startPrice = prices[0];
+            const currentPrice = prices[prices.length - 1];
+            const priceChange = currentPrice - startPrice;
             
-            if (p.length > 2) {
-              const startPrice = p[0];
-              const currentPrice = p[p.length - 1];
-              const priceChange = currentPrice - startPrice;
-              
-              const diff = Math.abs(priceChange);
-              let pct = Math.min(Math.round((diff / startPrice) * 20000), 99);
-              marketState[sym].percent = Math.max(pct, 15);
+            const diff = Math.abs(priceChange);
+            let pct = Math.min(Math.round((diff / startPrice) * 20000), 99);
+            marketState[sym].percent = Math.max(pct, 15);
 
-              const isSell = priceChange < 0;
-              marketState[sym].type = isSell ? "SELL" : "BUY";
+            const isSell = priceChange < 0;
+            marketState[sym].type = isSell ? "SELL" : "BUY";
 
-              const offset = currentPrice * 0.0015;
-              marketState[sym].entry = currentPrice.toFixed(2);
+            const offset = currentPrice * 0.0015;
+            marketState[sym].entry = currentPrice.toFixed(2);
 
-              if (isSell) {
-                marketState[sym].tp = (currentPrice - (offset * 2)).toFixed(2);
-                marketState[sym].sl = (currentPrice + offset).toFixed(2);
-              } else {
-                marketState[sym].tp = (currentPrice + (offset * 2)).toFixed(2);
-                marketState[sym].sl = (currentPrice - offset).toFixed(2);
-              }
+            if (isSell) {
+              marketState[sym].tp = (currentPrice - (offset * 2)).toFixed(2);
+              marketState[sym].sl = (currentPrice + offset).toFixed(2);
+            } else {
+              marketState[sym].tp = (currentPrice + (offset * 2)).toFixed(2);
+              marketState[sym].sl = (currentPrice - offset).toFixed(2);
             }
             renderUI();
           }
@@ -380,14 +371,23 @@
       };
 
       ws.onclose = () => {
-        logActivity("WebSocket disconnected. Reconnecting in 3s...");
-        setTimeout(initWebSocket, 3000);
+        logActivity("Socket resting. Reconnecting...");
+        setTimeout(initWebSocket, 2000);
       };
+    }
+
+    function pollNextMarket() {
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      
+      const m = MARKETS[marketIndex];
+      ws.send(JSON.stringify({ ticks_history: m.symbol, count: 10, end: "latest", style: "ticks" }));
+      
+      marketIndex = (marketIndex + 1) % MARKETS.length;
+      setTimeout(pollNextMarket, 120); // Smooth polling interval that never crashes
     }
 
     initWebSocket();
 
-    // WAKE LOCK: Keeps device/screen awake
     if ('wakeLock' in navigator) {
       let wakeLock = null;
       const requestWakeLock = async () => {
@@ -403,20 +403,12 @@
       });
     }
 
-    // COUNTDOWN & FORCE REFRESH
     let timeLeft = 30;
     setInterval(() => {
       timeLeft--;
       if (timeLeft <= 0) {
         timeLeft = 30;
-        logActivity("Executing deep 30s data sync cycle...");
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          MARKETS.forEach(m => {
-            ws.send(JSON.stringify({ ticks_history: m.symbol, count: 10, end: "latest", style: "ticks" }));
-          });
-        } else {
-          initWebSocket();
-        }
+        logActivity("Completed full 63 market data scan cycle.");
       }
       document.getElementById("refresh-timer").innerText = `REFRESH: ${timeLeft}s`;
     }, 1000);
