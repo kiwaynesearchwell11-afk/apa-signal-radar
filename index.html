@@ -237,7 +237,6 @@
       MARKETS.forEach(m => {
         const data = marketState[m.symbol];
 
-        // Breakout threshold set strictly to 82%
         if (data.percent >= 82) {
           data.status = "BREAKOUT";
           readyCount++;
@@ -335,17 +334,19 @@
       };
 
       ws.onclose = () => {
-        setTimeout(initWebSocket, 3000); // Auto-reconnect if connection drops
+        setTimeout(initWebSocket, 3000);
       };
     }
 
     initWebSocket();
 
-    // Auto-refresh/ping keeper every 30 seconds to prevent mobile/Chromebook sleep dropouts
+    // FORCE REFRESH: Every 30 seconds, this re-requests fresh history data for all 63 markets to guarantee active updates
     setInterval(() => {
       if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ ping: 1 }));
-      } else if (!ws || ws.readyState === WebSocket.CLOSED) {
+        MARKETS.forEach(m => {
+          ws.send(JSON.stringify({ ticks_history: m.symbol, count: 10, end: "latest", style: "ticks" }));
+        });
+      } else {
         initWebSocket();
       }
     }, 30000);
