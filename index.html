@@ -52,12 +52,18 @@
     .asset-status { font-size: 0.65rem; font-weight: 800; margin-top: 2px; }
     .asset-percent { font-size: 0.9rem; font-weight: 800; color: #ffffff; }
 
-    .progress-bar { background: #1e293b; height: 4px; border-radius: 2px; width: 100%; overflow: hidden; }
+    .levels-box { display: flex; justify-content: space-between; background: #0f172a; padding: 6px 10px; border-radius: 6px; font-size: 0.7rem; color: #94a3b8; margin-top: 4px; }
+    .levels-box span { color: #e2e8f0; font-weight: 700; }
+
+    .progress-bar { background: #1e293b; height: 4px; border-radius: 2px; width: 100%; overflow: hidden; margin-top: 4px; }
     .progress-fill { height: 100%; background: linear-gradient(90deg, #f97316, #e11d48); width: 0%; transition: width 0.4s ease; }
 
     .status-BLOCKED { color: #f43f5e; }
     .status-BREAKOUT { color: #38ef7d; }
     .status-ANALYZING { color: #64748b; }
+    
+    .type-BUY { color: #38ef7d; background: rgba(56, 239, 125, 0.1); padding: 2px 6px; border-radius: 4px; }
+    .type-SELL { color: #f43f5e; background: rgba(244, 63, 94, 0.1); padding: 2px 6px; border-radius: 4px; }
 
     .closest-card { background: #111827; border: 1px solid #1f293d; border-radius: 10px; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; position: sticky; bottom: 0; }
     .closest-left .label { font-size: 0.65rem; color: #f43f5e; font-weight: 700; }
@@ -179,7 +185,15 @@
     const alertedMarkets = {};
 
     MARKETS.forEach(m => {
-      marketState[m.symbol] = { percent: Math.floor(Math.random() * 40) + 10, status: "ANALYZING", prices: [] };
+      marketState[m.symbol] = { 
+        percent: Math.floor(Math.random() * 40) + 10, 
+        status: "ANALYZING", 
+        prices: [],
+        type: "BUY",
+        entry: 0,
+        tp: 0,
+        sl: 0
+      };
     });
 
     function requestNotificationPermission() {
@@ -194,18 +208,19 @@
       }
     }
 
-    function triggerNotifications(name, symbol, percent) {
+    function triggerNotifications(name, symbol, percent, type, entry, tp, sl) {
       if (!alertedMarkets[symbol]) {
         alertedMarkets[symbol] = true;
 
         if (Notification.permission === "granted") {
-          new Notification(`A.P.A. BREAKOUT: ${name}`, {
-            body: `Setup reached ${percent}% completion!`,
+          new Notification(`A.P.A. ${type} ALERT: ${name}`, {
+            body: `Setup at ${percent}%! Entry: ${entry} | TP: ${tp} | SL: ${sl}`,
           });
         }
 
         if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
-          const msg = `🚨 *A.P.A. BREAKOUT ALERT*\n\n*Market:* ${name}\n*Status:* BREAKOUT (${percent}%)\n*Action:* Check Chart Now`;
+          const emoji = type === "BUY" ? "🟢" : "🔴";
+          const msg = `🚨 *A.P.A. ${type} SIGNAL* ${emoji}\n\n*Market:* ${name}\n*Status:* BREAKOUT (${percent}%)\n\n🎯 *Entry:* \`${entry}\`\n🎯 *Take Profit:* \`${tp}\`\n🛡️ *Stop Loss:* \`${sl}\`\n\n*Action:* Check Chart Now`;
           fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(msg)}&parse_mode=Markdown`).catch(()=>{});
         }
       }
@@ -222,10 +237,11 @@
       MARKETS.forEach(m => {
         const data = marketState[m.symbol];
 
-        if (data.percent >= 90) {
+        // Breakout threshold set strictly to 82%
+        if (data.percent >= 82) {
           data.status = "BREAKOUT";
           readyCount++;
-          triggerNotifications(m.name, m.symbol, data.percent);
+          triggerNotifications(m.name, m.symbol, data.percent, data.type, data.entry, data.tp, data.sl);
         } else if (data.percent >= 50) {
           data.status = "BLOCKED";
         } else {
@@ -246,10 +262,18 @@
               <span class="asset-index">${m.id}</span>
               <div>
                 <div class="asset-name">${m.name}</div>
-                <div class="asset-status status-${data.status}">${data.status}</div>
+                <div>
+                  <span class="asset-status status-${data.status}">${data.status}</span>
+                  <span class="type-${data.type}" style="font-size: 0.65rem; font-weight: 800; margin-left: 6px;">${data.type}</span>
+                </div>
               </div>
             </div>
             <div class="asset-percent">${data.percent}%</div>
+          </div>
+          <div class="levels-box">
+            <span>Entry: ${data.entry || '---'}</span>
+            <span>TP: ${data.tp || '---'}</span>
+            <span>SL: ${data.sl || '---'}</span>
           </div>
           <div class="progress-bar"><div class="progress-fill" style="width: ${data.percent}%"></div></div>
         `;
@@ -263,13 +287,16 @@
 
     renderUI();
 
+    let ws;
     function initWebSocket() {
-      const ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=1089");
+      ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=1089");
+      
       ws.onopen = () => {
         MARKETS.forEach(m => {
           ws.send(JSON.stringify({ ticks_history: m.symbol, count: 10, end: "latest", style: "ticks", subscribe: 1 }));
         });
       };
+
       ws.onmessage = (e) => {
         const msg = JSON.parse(e.data);
         if (msg.msg_type === "tick") {
@@ -278,19 +305,50 @@
             marketState[sym].prices.push(msg.tick.quote);
             if (marketState[sym].prices.length > 10) marketState[sym].prices.shift();
             const p = marketState[sym].prices;
+            
             if (p.length > 2) {
-              const diff = Math.abs(p[p.length - 1] - p[0]);
-              let pct = Math.min(Math.round((diff / p[0]) * 20000), 99);
+              const startPrice = p[0];
+              const currentPrice = p[p.length - 1];
+              const priceChange = currentPrice - startPrice;
+              
+              const diff = Math.abs(priceChange);
+              let pct = Math.min(Math.round((diff / startPrice) * 20000), 99);
               marketState[sym].percent = Math.max(pct, 15);
+
+              const isSell = priceChange < 0;
+              marketState[sym].type = isSell ? "SELL" : "BUY";
+
+              const offset = currentPrice * 0.0015;
+              marketState[sym].entry = currentPrice.toFixed(2);
+
+              if (isSell) {
+                marketState[sym].tp = (currentPrice - (offset * 2)).toFixed(2);
+                marketState[sym].sl = (currentPrice + offset).toFixed(2);
+              } else {
+                marketState[sym].tp = (currentPrice + (offset * 2)).toFixed(2);
+                marketState[sym].sl = (currentPrice - offset).toFixed(2);
+              }
             }
             renderUI();
           }
         }
       };
-      ws.onclose = () => setTimeout(initWebSocket, 3000);
+
+      ws.onclose = () => {
+        setTimeout(initWebSocket, 3000); // Auto-reconnect if connection drops
+      };
     }
 
     initWebSocket();
+
+    // Auto-refresh/ping keeper every 30 seconds to prevent mobile/Chromebook sleep dropouts
+    setInterval(() => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ ping: 1 }));
+      } else if (!ws || ws.readyState === WebSocket.CLOSED) {
+        initWebSocket();
+      }
+    }, 30000);
   </script>
 </body>
 </html>
