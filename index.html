@@ -14,10 +14,17 @@
       max-width: 480px;
       margin: 0 auto;
     }
-    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
     .header h1 { font-size: 1.25rem; letter-spacing: 1px; color: #ffffff; font-weight: 800; }
+    
+    /* Option 3: Pulsing Live Badge */
     .bot-badge { background: #13272d; color: #38ef7d; border: 1px solid #1c4538; font-size: 0.7rem; font-weight: 700; padding: 6px 12px; border-radius: 20px; display: flex; align-items: center; gap: 6px; }
-    .dot { width: 6px; height: 6px; background-color: #38ef7d; border-radius: 50%; }
+    .dot { width: 6px; height: 6px; background-color: #38ef7d; border-radius: 50%; box-shadow: 0 0 0 rgba(56, 239, 125, 0.4); animation: pulse 2s infinite; }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(56, 239, 125, 0.7); }
+      70% { box-shadow: 0 0 0 6px rgba(56, 239, 125, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(56, 239, 125, 0); }
+    }
     
     .notify-btn {
       background: #111827;
@@ -28,10 +35,30 @@
       font-weight: 700;
       font-size: 0.8rem;
       width: 100%;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
       cursor: pointer;
       text-align: center;
     }
+
+    /* Option 1: Live Activity Feed Ticker Box */
+    .activity-ticker {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.7rem;
+      color: #38ef7d;
+      font-family: monospace;
+      margin-bottom: 16px;
+      height: 32px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .activity-ticker span { color: #64748b; }
 
     .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
     .metric-card { background: #111827; border: 1px solid #1f293d; border-radius: 10px; padding: 12px 16px; }
@@ -41,9 +68,11 @@
     .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
     .section-title-sub { font-size: 0.65rem; color: #f43f5e; font-weight: 700; text-transform: uppercase; }
     .section-title { font-size: 1.05rem; font-weight: 700; color: #ffffff; }
+    
+    /* Option 4: Countdown timer tag */
     .live-tag { background: #1e293b; color: #94a3b8; font-size: 0.65rem; font-weight: 700; padding: 4px 8px; border-radius: 12px; border: 1px solid #334155; }
 
-    .radar-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; max-height: 440px; overflow-y: auto; padding-right: 4px; }
+    .radar-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; max-height: 420px; overflow-y: auto; padding-right: 4px; }
     .radar-card { background: #111827; border: 1px solid #1f293d; border-radius: 10px; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
     .card-top { display: flex; justify-content: space-between; align-items: flex-start; }
     .asset-info { display: flex; align-items: center; gap: 10px; }
@@ -76,12 +105,17 @@
 
   <div class="header">
     <h1>A.P.A. LIVE</h1>
-    <div class="bot-badge"><div class="dot"></div> OLD BOT ONLINE</div>
+    <div class="bot-badge"><div class="dot"></div> RADAR ACTIVE</div>
   </div>
 
   <button class="notify-btn" id="notify-btn" onclick="requestNotificationPermission()">
     🔔 ENABLE BROWSER SIGNAL NOTIFICATIONS
   </button>
+
+  <!-- Option 1: Live Activity Feed Ticker -->
+  <div class="activity-ticker" id="activity-ticker">
+    <span>[SYSTEM]:</span> Initializing 63 market websocket streams...
+  </div>
 
   <div class="metrics-grid">
     <div class="metric-card"><div class="metric-label">MARKETS</div><div class="metric-value">63</div></div>
@@ -95,7 +129,8 @@
       <div class="section-title-sub">MARKET RADAR / LIVE FEED</div>
       <div class="section-title">Setups in motion</div>
     </div>
-    <div class="live-tag">LIVE DATA</div>
+    <!-- Option 4: Countdown Refresh Tag -->
+    <div class="live-tag" id="refresh-timer">REFRESH: 30s</div>
   </div>
 
   <div class="radar-list" id="radar-list"></div>
@@ -196,6 +231,12 @@
       };
     });
 
+    function logActivity(text) {
+      const ticker = document.getElementById("activity-ticker");
+      const time = new Date().toLocaleTimeString();
+      ticker.innerHTML = `<span>[${time}]:</span> ${text}`;
+    }
+
     function requestNotificationPermission() {
       if ("Notification" in window) {
         Notification.requestPermission().then(permission => {
@@ -203,6 +244,7 @@
             const btn = document.getElementById("notify-btn");
             btn.innerText = "🔔 BROWSER NOTIFICATIONS ACTIVE";
             btn.style.borderColor = "#38ef7d";
+            logActivity("Browser notifications permission granted.");
           }
         });
       }
@@ -211,6 +253,7 @@
     function triggerNotifications(name, symbol, percent, type, entry, tp, sl) {
       if (!alertedMarkets[symbol]) {
         alertedMarkets[symbol] = true;
+        logActivity(`🚨 BREAKOUT ALERTER FIRED FOR ${name} (${percent}%)`);
 
         if (Notification.permission === "granted") {
           new Notification(`A.P.A. ${type} ALERT: ${name}`, {
@@ -221,7 +264,7 @@
         if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
           const emoji = type === "BUY" ? "🟢" : "🔴";
           const msg = `🚨 *A.P.A. ${type} SIGNAL* ${emoji}\n\n*Market:* ${name}\n*Status:* BREAKOUT (${percent}%)\n\n🎯 *Entry:* \`${entry}\`\n🎯 *Take Profit:* \`${tp}\`\n🛡️ *Stop Loss:* \`${sl}\`\n\n*Action:* Check Chart Now`;
-          fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(msg)}&parse_mode=Markdown`).catch(()=>{});
+          fetch(`https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(msg)}&parse_mode=Markdown`).catch(()=>{});
         }
       }
     }
@@ -288,9 +331,11 @@
 
     let ws;
     function initWebSocket() {
+      logActivity("Connecting to Deriv WebSocket feed...");
       ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=1089");
       
       ws.onopen = () => {
+        logActivity("Connected successfully. Subscribing to 63 markets...");
         MARKETS.forEach(m => {
           ws.send(JSON.stringify({ ticks_history: m.symbol, count: 10, end: "latest", style: "ticks", subscribe: 1 }));
         });
@@ -334,21 +379,20 @@
       };
 
       ws.onclose = () => {
+        logActivity("WebSocket disconnected. Reconnecting in 3s...");
         setTimeout(initWebSocket, 3000);
       };
     }
 
     initWebSocket();
 
-    // WAKE LOCK: Keeps device/screen awake so the WebSocket connection doesn't sleep
+    // WAKE LOCK: Keeps device/screen awake
     if ('wakeLock' in navigator) {
       let wakeLock = null;
       const requestWakeLock = async () => {
         try {
           wakeLock = await navigator.wakeLock.request('screen');
-        } catch (err) {
-          console.log(`${err.name}, ${err.message}`);
-        }
+        } catch (err) {}
       };
       requestWakeLock();
       document.addEventListener('visibilitychange', async () => {
@@ -358,16 +402,23 @@
       });
     }
 
-    // FORCE REFRESH: Every 30 seconds, this re-requests fresh history data for all 63 markets
+    // COUNTDOWN & FORCE REFRESH (Options 4)
+    let timeLeft = 30;
     setInterval(() => {
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        MARKETS.forEach(m => {
-          ws.send(JSON.stringify({ ticks_history: m.symbol, count: 10, end: "latest", style: "ticks" }));
-        });
-      } else {
-        initWebSocket();
+      timeLeft--;
+      if (timeLeft <= 0) {
+        timeLeft = 30;
+        logActivity("Executing deep 30s data sync cycle...");
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          MARKETS.forEach(m => {
+            ws.send(JSON.stringify({ ticks_history: m.symbol, count: 10, end: "latest", style: "ticks" }));
+          });
+        } else {
+          initWebSocket();
+        }
       }
-    }, 30000);
+      document.getElementById("refresh-timer").innerText = `REFRESH: ${timeLeft}s`;
+    }, 1000);
   </script>
 </body>
 </html>
