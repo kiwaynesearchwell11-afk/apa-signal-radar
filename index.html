@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A.P.A. LIVE - 63 Market Signal Radar</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #0b1019;
+      color: #e2e8f0;
+      padding: 16px;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .header h1 { font-size: 1.25rem; letter-spacing: 1px; color: #ffffff; font-weight: 800; }
+    .bot-badge { background: #13272d; color: #38ef7d; border: 1px solid #1c4538; font-size: 0.7rem; font-weight: 700; padding: 6px 12px; border-radius: 20px; display: flex; align-items: center; gap: 6px; }
+    .dot { width: 6px; height: 6px; background-color: #38ef7d; border-radius: 50%; }
+    
+    .notify-btn {
+      background: #111827;
+      color: #38ef7d;
+      border: 1px solid #1c4538;
+      padding: 10px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.8rem;
+      width: 100%;
+      margin-bottom: 16px;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+    .metric-card { background: #111827; border: 1px solid #1f293d; border-radius: 10px; padding: 12px 16px; }
+    .metric-label { font-size: 0.65rem; color: #64748b; font-weight: 700; margin-bottom: 6px; }
+    .metric-value { font-size: 1.5rem; font-weight: 800; color: #ffffff; }
+
+    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .section-title-sub { font-size: 0.65rem; color: #f43f5e; font-weight: 700; text-transform: uppercase; }
+    .section-title { font-size: 1.05rem; font-weight: 700; color: #ffffff; }
+    .live-tag { background: #1e293b; color: #94a3b8; font-size: 0.65rem; font-weight: 700; padding: 4px 8px; border-radius: 12px; border: 1px solid #334155; }
+
+    .radar-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; max-height: 440px; overflow-y: auto; padding-right: 4px; }
+    .radar-card { background: #111827; border: 1px solid #1f293d; border-radius: 10px; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
+    .card-top { display: flex; justify-content: space-between; align-items: flex-start; }
+    .asset-info { display: flex; align-items: center; gap: 10px; }
+    .asset-index { font-size: 0.75rem; color: #64748b; font-weight: 700; min-width: 22px; }
+    .asset-name { font-size: 0.85rem; font-weight: 700; color: #ffffff; }
+    .asset-status { font-size: 0.65rem; font-weight: 800; margin-top: 2px; }
+    .asset-percent { font-size: 0.9rem; font-weight: 800; color: #ffffff; }
+
+    .progress-bar { background: #1e293b; height: 4px; border-radius: 2px; width: 100%; overflow: hidden; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, #f97316, #e11d48); width: 0%; transition: width 0.4s ease; }
+
+    .status-BLOCKED { color: #f43f5e; }
+    .status-BREAKOUT { color: #38ef7d; }
+    .status-ANALYZING { color: #64748b; }
+
+    .closest-card { background: #111827; border: 1px solid #1f293d; border-radius: 10px; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; position: sticky; bottom: 0; }
+    .closest-left .label { font-size: 0.65rem; color: #f43f5e; font-weight: 700; }
+    .closest-left .val { font-size: 0.95rem; font-weight: 800; color: #ffffff; margin-top: 2px; }
+    .closest-right .label { font-size: 0.65rem; color: #64748b; font-weight: 700; text-align: right; }
+    .closest-right .val { font-size: 0.95rem; font-weight: 800; color: #f43f5e; margin-top: 2px; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>A.P.A. LIVE</h1>
+    <div class="bot-badge"><div class="dot"></div> OLD BOT ONLINE</div>
+  </div>
+
+  <button class="notify-btn" id="notify-btn" onclick="requestNotificationPermission()">
+    🔔 ENABLE BROWSER SIGNAL NOTIFICATIONS
+  </button>
+
+  <div class="metrics-grid">
+    <div class="metric-card"><div class="metric-label">MARKETS</div><div class="metric-value">63</div></div>
+    <div class="metric-card"><div class="metric-label">READY</div><div class="metric-value" id="ready-count">0</div></div>
+    <div class="metric-card"><div class="metric-label">OBSERVED W / L</div><div class="metric-value">4/5</div></div>
+    <div class="metric-card"><div class="metric-label">OBSERVED RATE</div><div class="metric-value">44.4%</div></div>
+  </div>
+
+  <div class="section-header">
+    <div>
+      <div class="section-title-sub">MARKET RADAR / LIVE FEED</div>
+      <div class="section-title">Setups in motion</div>
+    </div>
+    <div class="live-tag">LIVE DATA</div>
+  </div>
+
+  <div class="radar-list" id="radar-list"></div>
+
+  <div class="closest-card">
+    <div class="closest-left">
+      <div class="label">CLOSEST TO READY</div>
+      <div class="val" id="closest-asset">Boom 150 Index</div>
+    </div>
+    <div class="closest-right">
+      <div class="label">STATUS</div>
+      <div class="val" id="closest-status">BLOCKED • 50%</div>
+    </div>
+  </div>
+
+  <script>
+    const TELEGRAM_BOT_TOKEN = ""; // Optional: Add Telegram Bot Token
+    const TELEGRAM_CHAT_ID = "";   // Optional: Add Telegram Chat ID
+
+    const MARKETS = [
+      { id: "01", symbol: "BOOM50", name: "Boom 50 Index" },
+      { id: "02", symbol: "BOOM150", name: "Boom 150 Index" },
+      { id: "03", symbol: "BOOM300", name: "Boom 300 Index" },
+      { id: "04", symbol: "BOOM500", name: "Boom 500 Index" },
+      { id: "05", symbol: "BOOM600", name: "Boom 600 Index" },
+      { id: "06", symbol: "BOOM1000", name: "Boom 1000 Index" },
+      { id: "07", symbol: "CRASH50", name: "Crash 50 Index" },
+      { id: "08", symbol: "CRASH150", name: "Crash 150 Index" },
+      { id: "09", symbol: "CRASH300", name: "Crash 300 Index" },
+      { id: "10", symbol: "CRASH500", name: "Crash 500 Index" },
+      { id: "11", symbol: "CRASH600", name: "Crash 600 Index" },
+      { id: "12", symbol: "CRASH1000", name: "Crash 1000 Index" },
+      { id: "13", symbol: "R_10", name: "Volatility 10 Index" },
+      { id: "14", symbol: "R_15", name: "Volatility 15 Index" },
+      { id: "15", symbol: "R_25", name: "Volatility 25 Index" },
+      { id: "16", symbol: "R_30", name: "Volatility 30 Index" },
+      { id: "17", symbol: "R_50", name: "Volatility 50 Index" },
+      { id: "18", symbol: "R_75", name: "Volatility 75 Index" },
+      { id: "19", symbol: "R_90", name: "Volatility 90 Index" },
+      { id: "20", symbol: "R_100", name: "Volatility 100 Index" },
+      { id: "21", symbol: "R_150", name: "Volatility 150 Index" },
+      { id: "22", symbol: "R_250", name: "Volatility 250 Index" },
+      { id: "23", symbol: "1HZ10V", name: "Volatility 10 (1s) Index" },
+      { id: "24", symbol: "1HZ25V", name: "Volatility 25 (1s) Index" },
+      { id: "25", symbol: "1HZ50V", name: "Volatility 50 (1s) Index" },
+      { id: "26", symbol: "1HZ75V", name: "Volatility 75 (1s) Index" },
+      { id: "27", symbol: "1HZ100V", name: "Volatility 100 (1s) Index" },
+      { id: "28", symbol: "1HZ150V", name: "Volatility 150 (1s) Index" },
+      { id: "29", symbol: "1HZ250V", name: "Volatility 250 (1s) Index" },
+      { id: "30", symbol: "JD10", name: "Jump 10 Index" },
+      { id: "31", symbol: "JD25", name: "Jump 25 Index" },
+      { id: "32", symbol: "JD50", name: "Jump 50 Index" },
+      { id: "33", symbol: "JD75", name: "Jump 75 Index" },
+      { id: "34", symbol: "JD100", name: "Jump 100 Index" },
+      { id: "35", symbol: "stpRNG", name: "Step Index" },
+      { id: "36", symbol: "stpRNG2", name: "Step 200 Index" },
+      { id: "37", symbol: "stpRNG3", name: "Step 300 Index" },
+      { id: "38", symbol: "stpRNG4", name: "Step 400 Index" },
+      { id: "39", symbol: "stpRNG5", name: "Step 500 Index" },
+      { id: "40", symbol: "SKEW1", name: "Skew Step 1 Index" },
+      { id: "41", symbol: "SKEW2", name: "Skew Step 2 Index" },
+      { id: "42", symbol: "SKEW3", name: "Skew Step 3 Index" },
+      { id: "43", symbol: "DEX600UP", name: "DEX 600 UP Index" },
+      { id: "44", symbol: "DEX600DN", name: "DEX 600 DN Index" },
+      { id: "45", symbol: "DEX900UP", name: "DEX 900 UP Index" },
+      { id: "46", symbol: "DEX900DN", name: "DEX 900 DN Index" },
+      { id: "47", symbol: "DEX1500UP", name: "DEX 1500 UP Index" },
+      { id: "48", symbol: "DEX1500DN", name: "DEX 1500 DN Index" },
+      { id: "49", symbol: "DSI10", name: "DSI 10 Index" },
+      { id: "50", symbol: "DSI20", name: "DSI 20 Index" },
+      { id: "51", symbol: "DSI30", name: "DSI 30 Index" },
+      { id: "52", symbol: "RB100", name: "Range Break 100 Index" },
+      { id: "53", symbol: "RB200", name: "Range Break 200 Index" },
+      { id: "54", symbol: "HB400", name: "Vol over Boom 400" },
+      { id: "55", symbol: "HB550", name: "Vol over Boom 550" },
+      { id: "56", symbol: "HB750", name: "Vol over Boom 750" },
+      { id: "57", symbol: "HC400", name: "Vol over Crash 400" },
+      { id: "58", symbol: "HC550", name: "Vol over Crash 550" },
+      { id: "59", symbol: "HC750", name: "Vol over Crash 750" },
+      { id: "60", symbol: "TREK1", name: "Trek Up Index" },
+      { id: "61", symbol: "TREK2", name: "Trek Down Index" },
+      { id: "62", symbol: "DBEAR", name: "Daily Reset Bear" },
+      { id: "63", symbol: "DBULL", name: "Daily Reset Bull" }
+    ];
+
+    const marketState = {};
+    const alertedMarkets = {};
+
+    MARKETS.forEach(m => {
+      marketState[m.symbol] = { percent: Math.floor(Math.random() * 40) + 10, status: "ANALYZING", prices: [] };
+    });
+
+    function requestNotificationPermission() {
+      if ("Notification" in window) {
+        Notification.requestPermission().then(permission => {
+          if (permission === "granted") {
+            const btn = document.getElementById("notify-btn");
+            btn.innerText = "🔔 BROWSER NOTIFICATIONS ACTIVE";
+            btn.style.borderColor = "#38ef7d";
+          }
+        });
+      }
+    }
+
+    function triggerNotifications(name, symbol, percent) {
+      if (!alertedMarkets[symbol]) {
+        alertedMarkets[symbol] = true;
+
+        if (Notification.permission === "granted") {
+          new Notification(`A.P.A. BREAKOUT: ${name}`, {
+            body: `Setup reached ${percent}% completion!`,
+          });
+        }
+
+        if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
+          const msg = `🚨 *A.P.A. BREAKOUT ALERT*\n\n*Market:* ${name}\n*Status:* BREAKOUT (${percent}%)\n*Action:* Check Chart Now`;
+          fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(msg)}&parse_mode=Markdown`).catch(()=>{});
+        }
+      }
+    }
+
+    function renderUI() {
+      const container = document.getElementById("radar-list");
+      container.innerHTML = "";
+
+      let highestPct = -1;
+      let closestAsset = MARKETS[0];
+      let readyCount = 0;
+
+      MARKETS.forEach(m => {
+        const data = marketState[m.symbol];
+
+        if (data.percent >= 90) {
+          data.status = "BREAKOUT";
+          readyCount++;
+          triggerNotifications(m.name, m.symbol, data.percent);
+        } else if (data.percent >= 50) {
+          data.status = "BLOCKED";
+        } else {
+          data.status = "ANALYZING";
+          alertedMarkets[m.symbol] = false;
+        }
+
+        if (data.percent > highestPct) {
+          highestPct = data.percent;
+          closestAsset = m;
+        }
+
+        const card = document.createElement("div");
+        card.className = "radar-card";
+        card.innerHTML = `
+          <div class="card-top">
+            <div class="asset-info">
+              <span class="asset-index">${m.id}</span>
+              <div>
+                <div class="asset-name">${m.name}</div>
+                <div class="asset-status status-${data.status}">${data.status}</div>
+              </div>
+            </div>
+            <div class="asset-percent">${data.percent}%</div>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width: ${data.percent}%"></div></div>
+        `;
+        container.appendChild(card);
+      });
+
+      document.getElementById("ready-count").innerText = readyCount;
+      document.getElementById("closest-asset").innerText = closestAsset.name;
+      document.getElementById("closest-status").innerText = `${marketState[closestAsset.symbol].status} • ${highestPct}%`;
+    }
+
+    renderUI();
+
+    function initWebSocket() {
+      const ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=1089");
+      ws.onopen = () => {
+        MARKETS.forEach(m => {
+          ws.send(JSON.stringify({ ticks_history: m.symbol, count: 10, end: "latest", style: "ticks", subscribe: 1 }));
+        });
+      };
+      ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        if (msg.msg_type === "tick") {
+          const sym = msg.tick.symbol;
+          if (marketState[sym]) {
+            marketState[sym].prices.push(msg.tick.quote);
+            if (marketState[sym].prices.length > 10) marketState[sym].prices.shift();
+            const p = marketState[sym].prices;
+            if (p.length > 2) {
+              const diff = Math.abs(p[p.length - 1] - p[0]);
+              let pct = Math.min(Math.round((diff / p[0]) * 20000), 99);
+              marketState[sym].percent = Math.max(pct, 15);
+            }
+            renderUI();
+          }
+        }
+      };
+      ws.onclose = () => setTimeout(initWebSocket, 3000);
+    }
+
+    initWebSocket();
+  </script>
+</body>
+</html>
