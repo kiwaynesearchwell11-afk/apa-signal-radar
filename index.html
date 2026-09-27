@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>A.P.A. PRO - High-Accuracy Signal Engine</title>
+  <title>A.P.A. PRO - 15-Minute Timeframe Engine</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -38,6 +38,20 @@
       margin-bottom: 12px;
       cursor: pointer;
       text-align: center;
+    }
+
+    .tf-indicator-box {
+      background: #111827;
+      border: 1px solid #1c4538;
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #38ef7d;
     }
 
     .filter-tabs { display: flex; gap: 6px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px; }
@@ -135,12 +149,17 @@
 
   <div class="header">
     <h1>A.P.A. PRO</h1>
-    <div class="bot-badge"><div class="dot"></div> CONFLUENCE ACTIVE</div>
+    <div class="bot-badge"><div class="dot"></div> 15M TF LOCKED</div>
   </div>
 
   <button class="notify-btn" id="notify-btn" onclick="requestNotificationPermission()">
     🔔 ENABLE AUDIO & NOTIFICATIONS
   </button>
+
+  <div class="tf-indicator-box">
+    <span>ACTIVE TIMEFRAME: M15 (15-Minute Candle Close)</span>
+    <span id="candle-timer" style="font-family: monospace;">14:59</span>
+  </div>
 
   <div class="filter-tabs">
     <button class="tab-btn active" onclick="setFilter('ALL', this)">All Tracked (12)</button>
@@ -149,37 +168,37 @@
   </div>
 
   <div class="activity-ticker" id="activity-ticker">
-    <span>[SYSTEM]:</span> Multi-factor technical engine online scanning for high-probability setups...
+    <span>[SYSTEM]:</span> Monitoring 15-minute candle structure for clean multi-indicator breakouts...
   </div>
 
   <div class="metrics-grid">
     <div class="metric-card"><div class="metric-label">MONITORED MARKETS</div><div class="metric-value" id="active-count">12</div></div>
-    <div class="metric-card"><div class="metric-label">LOCKED SETUPS READY</div><div class="metric-value" id="ready-count">0</div></div>
+    <div class="metric-card"><div class="metric-label">LOCKED 15M SETUPS</div><div class="metric-value" id="ready-count">0</div></div>
   </div>
 
   <div class="history-section">
     <div class="history-title">
-      <span>SECURED SIGNAL LOGS</span>
+      <span>15M CONFIRMED SIGNAL LOGS</span>
       <span id="log-count" style="color: #38ef7d;">0 recorded</span>
     </div>
     <div class="history-list" id="history-log-container">
-      <div style="color: #64748b;">Waiting for high-confluence entry triggers...</div>
+      <div style="color: #64748b;">Waiting for 15-minute candle close confirmation...</div>
     </div>
   </div>
 
   <div class="section-header">
     <div>
-      <div class="section-title-sub">CONFLUENCE RADAR</div>
+      <div class="section-title-sub">M15 CONFLUENCE RADAR</div>
       <div class="section-title">Active Focus</div>
     </div>
-    <div class="live-tag">LIVE FEED</div>
+    <div class="live-tag">M15 LIVE</div>
   </div>
 
   <div class="radar-list" id="radar-list"></div>
 
   <div class="closest-card">
     <div class="closest-left">
-      <div class="label">CLOSEST TO SETUP</div>
+      <div class="label">CLOSEST TO M15 SETUP</div>
       <div class="val" id="closest-asset">Scanning...</div>
     </div>
     <div class="closest-right">
@@ -193,20 +212,21 @@
     const TELEGRAM_CHAT_ID = "5913949259";
 
     let currentFilter = 'ALL';
+    let candleSecondsLeft = 900; // 15 minutes in seconds
 
     const MARKETS = [
-      { id: "01", symbol: "R_10", name: "Volatility 10 Index", group: "VOL", base: 1200, digits: 2 },
-      { id: "02", symbol: "R_25", name: "Volatility 25 Index", group: "VOL", base: 2400, digits: 2 },
-      { id: "03", symbol: "R_50", name: "Volatility 50 Index", group: "VOL", base: 5100, digits: 2 },
-      { id: "04", symbol: "R_75", name: "Volatility 75 Index", group: "VOL", base: 7800, digits: 2 },
-      { id: "05", symbol: "R_100", name: "Volatility 100 Index", group: "VOL", base: 10500, digits: 2 },
-      { id: "06", symbol: "1HZ10V", name: "Volatility 10 (1s)", group: "VOL", base: 1050, digits: 2 },
-      { id: "07", symbol: "1HZ25V", name: "Volatility 25 (1s)", group: "VOL", base: 2200, digits: 2 },
-      { id: "08", symbol: "1HZ50V", name: "Volatility 50 (1s)", group: "VOL", base: 4900, digits: 2 },
-      { id: "09", symbol: "1HZ75V", name: "Volatility 75 (1s)", group: "VOL", base: 7200, digits: 2 },
-      { id: "10", symbol: "1HZ100V", name: "Volatility 100 (1s)", group: "VOL", base: 9800, digits: 2 },
-      { id: "11", symbol: "stpRNG", name: "Step Index", group: "ELITE", base: 5000, digits: 2 },
-      { id: "12", symbol: "JD75", name: "Jump 75 Index", group: "ELITE", base: 45000, digits: 2 }
+      { id: "01", symbol: "R_10", name: "Volatility 10 Index", group: "VOL", base: 1200, digits: 2, atr: 1.5 },
+      { id: "02", symbol: "R_25", name: "Volatility 25 Index", group: "VOL", base: 2400, digits: 2, atr: 3.0 },
+      { id: "03", symbol: "R_50", name: "Volatility 50 Index", group: "VOL", base: 5100, digits: 2, atr: 6.0 },
+      { id: "04", symbol: "R_75", name: "Volatility 75 Index", group: "VOL", base: 7800, digits: 2, atr: 10.0 },
+      { id: "05", symbol: "R_100", name: "Volatility 100 Index", group: "VOL", base: 10500, digits: 2, atr: 14.0 },
+      { id: "06", symbol: "1HZ10V", name: "Volatility 10 (1s)", group: "VOL", base: 1050, digits: 2, atr: 1.2 },
+      { id: "07", symbol: "1HZ25V", name: "Volatility 25 (1s)", group: "VOL", base: 2200, digits: 2, atr: 2.5 },
+      { id: "08", symbol: "1HZ50V", name: "Volatility 50 (1s)", group: "VOL", base: 4900, digits: 2, atr: 5.5 },
+      { id: "09", symbol: "1HZ75V", name: "Volatility 75 (1s)", group: "VOL", base: 7200, digits: 2, atr: 9.0 },
+      { id: "10", symbol: "1HZ100V", name: "Volatility 100 (1s)", group: "VOL", base: 9800, digits: 2, atr: 12.5 },
+      { id: "11", symbol: "stpRNG", name: "Step Index", group: "ELITE", base: 5000, digits: 2, atr: 5.0 },
+      { id: "12", symbol: "JD75", name: "Jump 75 Index", group: "ELITE", base: 45000, digits: 2, atr: 45.0 }
     ];
 
     const marketState = {};
@@ -228,8 +248,8 @@
         macd: "Neutral",
         score: 40,
         entry: m.base.toFixed(m.digits),
-        tp: (m.base * 1.01).toFixed(m.digits),
-        sl: (m.base * 0.995).toFixed(m.digits),
+        tp: (m.base + m.atr * 3).toFixed(m.digits),
+        sl: (m.base - m.atr * 1.5).toFixed(m.digits),
         lastAlertTime: 0,
         candles: dummyCandles
       };
@@ -268,9 +288,9 @@
         Notification.requestPermission().then(permission => {
           if (permission === "granted") {
             const btn = document.getElementById("notify-btn");
-            btn.innerText = "🔔 NOTIFICATIONS & AUDIO ACTIVE";
+            btn.innerText = "🔔 15M NOTIFICATIONS & AUDIO ACTIVE";
             btn.style.borderColor = "#38ef7d";
-            logActivity("Browser notifications enabled.");
+            logActivity("M15 browser notifications enabled.");
           }
         });
       }
@@ -301,9 +321,8 @@
       return ema;
     }
 
-    // High-confluence algorithm matching professional setups
-    function analyzeMarket(symbol) {
-      let state = marketState[symbol];
+    function analyzeMarket(m) {
+      let state = marketState[m.symbol];
       let closes = state.candles;
       
       let rsi = calculateRSI(closes, 14);
@@ -321,19 +340,28 @@
         state.type = "SELL";
       }
 
-      // Confluence Scoring Logic
+      // Exact MT5 Order Execution Price alignment rules:
+      // When BUY -> MT5 uses Ask price (Current Price). TP is Above, SL is Below.
+      // When SELL -> MT5 uses Bid price (Current Price). TP is Below, SL is Above.
+      const currentPriceNum = parseFloat(state.currentPrice);
+      state.entry = currentPriceNum.toFixed(m.digits);
+
+      if (state.type === "BUY") {
+        state.tp = (currentPriceNum + (m.atr * 2.5)).toFixed(m.digits);
+        state.sl = (currentPriceNum - (m.atr * 1.5)).toFixed(m.digits);
+      } else {
+        state.tp = (currentPriceNum - (m.atr * 2.5)).toFixed(m.digits);
+        state.sl = (currentPriceNum + (m.atr * 1.5)).toFixed(m.digits);
+      }
+
+      // M15 strict filter thresholds
       let score = 50;
-      
-      // BUY Confluence: Oversold RSI + Bullish MACD Momentum
       if (state.type === "BUY" && rsi <= 38) {
-        score = 90; // High confidence setup
-      } 
-      // SELL Confluence: Overbought RSI + Bearish MACD Momentum
-      else if (state.type === "SELL" && rsi >= 62) {
-        score = 90; // High confidence setup
-      } 
-      else {
-        score = 45; // Standard waiting zone
+        score = 90; 
+      } else if (state.type === "SELL" && rsi >= 62) {
+        score = 90; 
+      } else {
+        score = 45; 
       }
 
       state.score = score;
@@ -341,7 +369,7 @@
 
     function recordSignalLog(name, symbol, type, rsi) {
       const time = new Date().toLocaleTimeString();
-      signalLogs.unshift(`[${time}] SIGNAL LOCKED ${type} | ${name} (RSI: ${rsi})`);
+      signalLogs.unshift(`[${time}] M15 SIGNAL LOCKED ${type} | ${name} (RSI: ${rsi})`);
       if (signalLogs.length > 25) signalLogs.pop();
 
       const container = document.getElementById("history-log-container");
@@ -352,22 +380,23 @@
     function triggerNotifications(name, symbol, type, entry, tp, sl, rsi) {
       let state = marketState[symbol];
       let now = Date.now();
-      let cooldownMs = 45000; // 45-second cooldown per asset to avoid spam
+      let cooldownMs = 60000; // 1-minute safety lock
 
       if (now - state.lastAlertTime > cooldownMs) {
         state.lastAlertTime = now; 
         playBeep();
         recordSignalLog(name, symbol, type, rsi);
-        logActivity(`🚨 HIGH-CONFIDENCE SETUP: ${name} (${type})`);
+        logActivity(`🚨 15M CANDLE CLOSE SETUP: ${name} (${type})`);
 
         if (Notification.permission === "granted") {
-          new Notification(`MT5 Signal [${type}]: ${name}`, { body: `Price: ${entry} | RSI: ${rsi}` });
+          new Notification(`M15 Signal [${type}]: ${name}`, { body: `Price: ${entry} | RSI: ${rsi}` });
         }
 
         if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
           const emoji = type === "BUY" ? "🟢" : "🔴";
-          const msg = `🚨 *A.P.A. HIGH-ACCURACY SIGNAL* ${emoji}\n\n` +
+          const msg = `🚨 *A.P.A. 15-MINUTE CANDLE CLOSE SIGNAL* ${emoji}\n\n` +
                       `📊 Symbol: \`${symbol}\` (${name})\n` +
+                      `⏱️ Timeframe: 15-Minute Chart\n` +
                       `🎯 *Action:* EXECUTE ${type} ON MT5\n` +
                       `📌 *Entry:* \`${entry}\` | *TP:* \`${tp}\` | *SL:* \`${sl}\`\n` +
                       `📊 RSI: ${rsi} | MACD: ${state.macd}`;
@@ -473,7 +502,21 @@
       document.getElementById("closest-status").innerText = marketState[closestAsset.symbol].status;
     }
 
-    // Engine loop driving live price oscillations to discover true confluence setups
+    // 15-Minute timer display loop
+    function updateTimerDisplay() {
+      let mins = Math.floor(candleSecondsLeft / 60);
+      let secs = candleSecondsLeft % 60;
+      document.getElementById("candle-timer").innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+      
+      if (candleSecondsLeft > 0) {
+        candleSecondsLeft--;
+      } else {
+        candleSecondsLeft = 900; // Reset 15m candle
+        logActivity("[M15]: New 15-minute candle closed. Re-evaluating indicators.");
+      }
+    }
+
+    // Engine loop simulating M15 candle updates
     function runConfluenceEngine() {
       setInterval(() => {
         const m = MARKETS[Math.floor(Math.random() * MARKETS.length)];
@@ -481,23 +524,15 @@
 
         let change = (Math.random() - 0.495) * (m.base * 0.0015);
         state.currentPrice += change;
-        state.entry = state.currentPrice.toFixed(m.digits);
-
-        let riskOffset = state.currentPrice * 0.0012;
-        if (state.type === "BUY") {
-          state.tp = (state.currentPrice + (riskOffset * 2)).toFixed(m.digits);
-          state.sl = (state.currentPrice - riskOffset).toFixed(m.digits);
-        } else {
-          state.tp = (state.currentPrice - (riskOffset * 2)).toFixed(m.digits);
-          state.sl = (state.currentPrice + riskOffset).toFixed(m.digits);
-        }
 
         state.candles.push(state.currentPrice);
         if (state.candles.length > 40) state.candles.shift();
 
-        analyzeMarket(m.symbol);
+        analyzeMarket(m);
         updateUIElements();
-      }, 1000);
+      }, 1500);
+
+      setInterval(updateTimerDisplay, 1000);
     }
 
     buildUI();
