@@ -3,484 +3,331 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>M15 Live Chart Analyzer & Signal Scanner</title>
+  <title>M15 Live Signal Terminal</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background-color: #060911;
       color: #f1f5f9;
-      padding: 14px;
-      max-width: 560px;
+      padding: 12px;
+      max-width: 520px;
       margin: 0 auto;
-      padding-bottom: 50px;
+      padding-bottom: 40px;
     }
-    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-    .header h1 { font-size: 1.15rem; font-weight: 800; color: #ffffff; letter-spacing: 0.5px; }
     
-    .status-pill { font-size: 0.68rem; font-weight: 700; padding: 5px 12px; border-radius: 12px; background: #131d31; color: #38ef7d; border: 1px solid #22324e; display: flex; align-items: center; gap: 6px; }
-    .dot { width: 7px; height: 7px; background-color: #38ef7d; border-radius: 50%; }
-    .dot.offline { background-color: #ef4444; }
-    .dot.connecting { background-color: #f59e0b; }
-
-    .sound-toggle {
-      background: #131d31;
-      border: 1px solid #22324e;
-      color: #94a3b8;
-      padding: 6px 12px;
-      border-radius: 6px;
-      font-size: 0.7rem;
-      font-weight: 700;
-      cursor: pointer;
-      margin-bottom: 12px;
+    .top-bar {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      width: 100%;
+      background: #0d1322;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid #1c273e;
+      margin-bottom: 12px;
     }
-    .sound-toggle.active { color: #38ef7d; border-color: #059669; }
+    .top-bar h1 { font-size: 0.95rem; color: #fff; }
 
-    .category-tabs { display: flex; gap: 6px; margin-bottom: 14px; overflow-x: auto; padding-bottom: 4px; }
-    .tab {
-      background: #0f172a;
-      color: #9ca3af;
-      border: 1px solid #1e293b;
-      padding: 7px 12px;
+    .status-badge {
+      font-size: 0.65rem;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 12px;
+      background: #1e293b;
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .status-badge.online { background: #064e3b; color: #34d399; }
+    .status-badge.error { background: #881337; color: #f43f5e; }
+    .indicator { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+    .btn-row { display: flex; gap: 8px; margin-bottom: 12px; }
+    .btn {
+      flex: 1;
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #cbd5e1;
+      padding: 8px;
       border-radius: 6px;
-      font-size: 0.7rem;
+      font-size: 0.72rem;
       font-weight: 700;
       cursor: pointer;
-      white-space: nowrap;
     }
-    .tab.active { background: #065f46; color: #34d399; border-color: #047857; }
+    .btn.active { background: #0284c7; color: #fff; border-color: #38bdf8; }
 
-    .signal-list { display: flex; flex-direction: column; gap: 12px; }
-    
-    .signal-card {
+    .cards-wrapper { display: flex; flex-direction: column; gap: 10px; }
+
+    .card {
       background: #0d1322;
       border: 1px solid #1c273e;
-      border-radius: 10px;
-      padding: 14px;
+      border-radius: 8px;
+      padding: 12px;
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      transition: all 0.3s ease;
+      gap: 8px;
     }
-    .signal-card.buy-setup { border-color: #10b981; background: #052319; box-shadow: 0 0 12px rgba(16, 185, 129, 0.2); }
-    .signal-card.sell-setup { border-color: #f43f5e; background: #280b12; box-shadow: 0 0 12px rgba(244, 63, 94, 0.2); }
+    .card.buy { border-color: #10b981; background: #042017; }
+    .card.sell { border-color: #f43f5e; background: #260a12; }
 
-    .card-header { display: flex; justify-content: space-between; align-items: center; }
-    .market-name { font-size: 0.88rem; font-weight: 800; color: #ffffff; }
-    
-    .action-badge { font-size: 0.68rem; font-weight: 800; padding: 4px 10px; border-radius: 4px; letter-spacing: 0.5px; }
-    .badge-buy { background: rgba(52, 211, 153, 0.2); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.4); }
-    .badge-sell { background: rgba(244, 63, 94, 0.2); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.4); }
-    .badge-wait { background: rgba(156, 163, 175, 0.1); color: #9ca3af; border: 1px solid rgba(156, 163, 175, 0.2); }
+    .card-head { display: flex; justify-content: space-between; align-items: center; }
+    .symbol-title { font-size: 0.85rem; font-weight: 800; color: #f8fafc; }
 
-    .pattern-tag {
-      display: inline-block;
+    .signal-pill {
       font-size: 0.65rem;
-      font-weight: 700;
-      color: #38bdf8;
-      background: rgba(56, 189, 248, 0.1);
-      border: 1px solid rgba(56, 189, 248, 0.25);
+      font-weight: 800;
       padding: 3px 8px;
       border-radius: 4px;
-      margin-top: 2px;
+      letter-spacing: 0.5px;
     }
+    .pill-wait { background: #334155; color: #94a3b8; }
+    .pill-buy { background: #059669; color: #ecfdf5; }
+    .pill-sell { background: #e11d48; color: #fff1f2; }
 
-    .metrics-grid {
+    .data-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 6px;
-      font-size: 0.72rem;
-      font-family: monospace;
       background: #060911;
-      padding: 8px 10px;
+      padding: 8px;
       border-radius: 6px;
+      font-family: monospace;
+      font-size: 0.7rem;
       color: #94a3b8;
     }
-    .metrics-grid span b { color: #f1f5f9; }
-    .pct-up { color: #34d399 !important; }
-    .pct-down { color: #fb7185 !important; }
+    .data-grid b { color: #f1f5f9; }
+    .up { color: #34d399 !important; }
+    .down { color: #fb7185 !important; }
 
-    .progress-bar-bg {
-      width: 100%;
-      height: 4px;
-      background: #1c273e;
-      border-radius: 2px;
-      overflow: hidden;
-      margin-top: 4px;
-    }
-    .progress-bar-fill {
-      height: 100%;
-      background: #38ef7d;
-      width: 0%;
-      transition: width 0.3s ease;
-    }
-
-    .levels-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 6px;
-      font-size: 0.72rem;
-      font-family: monospace;
-      background: #060911;
-      padding: 8px 10px;
+    .debug-terminal {
+      margin-top: 16px;
+      background: #020408;
+      border: 1px solid #1e293b;
       border-radius: 6px;
-      text-align: center;
-      color: #cbd5e1;
+      padding: 8px 10px;
+      font-family: monospace;
+      font-size: 0.62rem;
+      color: #38ef7d;
+      max-height: 100px;
+      overflow-y: auto;
     }
-    .levels-grid div b { display: block; font-size: 0.62rem; color: #64748b; text-transform: uppercase; margin-bottom: 2px; }
   </style>
 </head>
 <body>
 
-  <div class="header">
-    <h1>M15 Live Chart Analyzer</h1>
-    <div class="status-pill"><div class="dot connecting" id="conn-dot"></div><span id="conn-text">INITIALIZING</span></div>
+  <div class="top-bar">
+    <h1>M15 Signal Terminal</h1>
+    <div class="status-badge" id="status-tag"><div class="indicator"></div><span id="status-text">OFFLINE</span></div>
   </div>
 
-  <button class="sound-toggle active" id="audio-btn" onclick="toggleAudio()">
-    <span>Audio Execution Alerts</span>
-    <span id="audio-status">ENABLED</span>
-  </button>
-
-  <div class="category-tabs">
-    <button class="tab active" onclick="switchCategory('ALL', this)">All Markets</button>
-    <button class="tab" onclick="switchCategory('STD', this)">Standard Vol</button>
-    <button class="tab" onclick="switchCategory('1S', this)">1-Second Vol</button>
-    <button class="tab" onclick="switchCategory('ELITE', this)">Step & Jump</button>
+  <div class="btn-row">
+    <button class="btn active" id="btn-reconnect" onclick="reconnect()">Force Reconnect</button>
   </div>
 
-  <div class="signal-list" id="signal-container"></div>
+  <div class="cards-wrapper" id="card-container"></div>
+
+  <div class="debug-terminal" id="terminal">System Initialized. Awaiting socket...</div>
 
   <script>
     const MARKETS = [
-      { symbol: "R_10", name: "Volatility 10 Index", group: "STD", digits: 2 },
-      { symbol: "R_25", name: "Volatility 25 Index", group: "STD", digits: 2 },
-      { symbol: "R_50", name: "Volatility 50 Index", group: "STD", digits: 2 },
-      { symbol: "R_75", name: "Volatility 75 Index", group: "STD", digits: 2 },
-      { symbol: "R_100", name: "Volatility 100 Index", group: "STD", digits: 2 },
-      { symbol: "1HZ10V", name: "Volatility 10 (1s)", group: "1S", digits: 2 },
-      { symbol: "1HZ25V", name: "Volatility 25 (1s)", group: "1S", digits: 2 },
-      { symbol: "1HZ50V", name: "Volatility 50 (1s)", group: "1S", digits: 2 },
-      { symbol: "1HZ75V", name: "Volatility 75 (1s)", group: "1S", digits: 2 },
-      { symbol: "1HZ100V", name: "Volatility 100 (1s)", group: "1S", digits: 2 },
-      { symbol: "stpRNG", name: "Step Index", group: "ELITE", digits: 2 },
-      { symbol: "JD10", name: "Jump 10 Index", group: "ELITE", digits: 2 },
-      { symbol: "JD50", name: "Jump 50 Index", group: "ELITE", digits: 2 },
-      { symbol: "JD75", name: "Jump 75 Index", group: "ELITE", digits: 2 }
+      { symbol: "R_10", name: "Volatility 10 Index", digits: 2 },
+      { symbol: "R_25", name: "Volatility 25 Index", digits: 2 },
+      { symbol: "R_50", name: "Volatility 50 Index", digits: 2 },
+      { symbol: "R_75", name: "Volatility 75 Index", digits: 2 },
+      { symbol: "R_100", name: "Volatility 100 Index", digits: 2 },
+      { symbol: "1HZ10V", name: "Volatility 10 (1s)", digits: 2 },
+      { symbol: "1HZ25V", name: "Volatility 25 (1s)", digits: 2 },
+      { symbol: "1HZ50V", name: "Volatility 50 (1s)", digits: 2 },
+      { symbol: "1HZ75V", name: "Volatility 75 (1s)", digits: 2 },
+      { symbol: "1HZ100V", name: "Volatility 100 (1s)", digits: 2 }
     ];
 
-    const marketState = {};
-    let activeCategory = 'ALL';
-    let audioEnabled = true;
-    let audioCtx = null;
-    let pingInterval = null;
+    const state = {};
+    let ws = null;
+    let ticksReceived = 0;
 
     MARKETS.forEach(m => {
-      marketState[m.symbol] = {
+      state[m.symbol] = {
         price: 0,
         m15ChangePct: "0.00",
-        trendStrength: 0,
         rsi: 50,
         ema50: 0,
-        pattern: "Waiting Feed...",
-        action: "WAIT",
-        entry: "0.00",
-        tp: "0.00",
-        sl: "0.00",
-        lastAlertState: "WAIT",
+        signal: "WAIT",
+        ticks: 0,
         candles: []
       };
     });
 
-    function toggleAudio() {
-      audioEnabled = !audioEnabled;
-      const btn = document.getElementById("audio-btn");
-      const status = document.getElementById("audio-status");
-      if (audioEnabled) {
-        btn.classList.add("active");
-        status.innerText = "ENABLED";
-      } else {
-        btn.classList.remove("active");
-        status.innerText = "DISABLED";
-      }
-    }
-
-    function playBeep(type) {
-      if (!audioEnabled) return;
-      try {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        
-        osc.frequency.value = type === 'BUY' ? 880 : 440; 
-        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.35);
-      } catch(e) {}
-    }
-
-    function switchCategory(cat, btn) {
-      activeCategory = cat;
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      btn.classList.add('active');
-      renderUI();
+    function printLog(text) {
+      const term = document.getElementById("terminal");
+      const time = new Date().toLocaleTimeString();
+      term.innerHTML = `[${time}] ${text}<br>` + term.innerHTML;
     }
 
     function calculateRSI(closes, period = 14) {
       if (closes.length < period + 1) return 50;
       let gains = 0, losses = 0;
       for (let i = 1; i <= period; i++) {
-        const change = closes[closes.length - i] - closes[closes.length - i - 1];
-        if (change >= 0) gains += change;
-        else losses -= change;
+        let diff = closes[closes.length - i] - closes[closes.length - i - 1];
+        if (diff >= 0) gains += diff; else losses -= diff;
       }
-      let avgGain = gains / period;
-      let avgLoss = losses / period;
+      let avgGain = gains / period, avgLoss = losses / period;
       if (avgLoss === 0) return 100;
-      let rs = avgGain / avgLoss;
-      return Math.round(100 - (100 / (1 + rs)));
+      return Math.round(100 - (100 / (1 + (avgGain / avgLoss))));
     }
 
     function calculateEMA(closes, period = 50) {
       if (closes.length === 0) return 0;
-      let k = 2 / (period + 1);
-      let ema = closes[0];
+      let k = 2 / (period + 1), ema = closes[0];
       for (let i = 1; i < closes.length; i++) {
         ema = (closes[i] * k) + (ema * (1 - k));
       }
       return ema;
     }
 
-    function calculateATR(candles, period = 14) {
-      if (candles.length < period + 1) return 1.0;
-      let trs = [];
-      for (let i = 1; i < candles.length; i++) {
-        let high = Number(candles[i].high) || Number(candles[i].close);
-        let low = Number(candles[i].low) || Number(candles[i].close);
-        let prevClose = Number(candles[i - 1].close);
-        let tr = Math.max(high - low, Math.abs(high - prevClose), Math.abs(low - prevClose));
-        trs.push(tr);
-      }
-      let recentTrs = trs.slice(-period);
-      return recentTrs.reduce((a, b) => a + b, 0) / recentTrs.length;
-    }
+    function analyze(m, candles) {
+      if (!candles || candles.length < 20) return;
+      const closes = candles.map(c => Number(c.close));
+      const price = closes[closes.length - 1];
+      const openPrice = Number(candles[candles.length - 1].open);
 
-    function detectCandlePattern(candles) {
-      if (candles.length < 2) return "Standard Candle";
-      const curr = candles[candles.length - 1];
-      const prev = candles[candles.length - 2];
-      
-      const cOpen = Number(curr.open), cClose = Number(curr.close);
-      const cHigh = Number(curr.high), cLow = Number(curr.low);
-      const pOpen = Number(prev.open), pClose = Number(prev.close);
-
-      const cBody = Math.abs(cClose - cOpen);
-      const cRange = cHigh - cLow;
-      if (cRange === 0) return "Standard Candle";
-
-      const upperWick = cHigh - Math.max(cOpen, cClose);
-      const lowerWick = Math.min(cOpen, cClose) - cLow;
-
-      const isBullishEngulfing = (pClose < pOpen) && (cClose > cOpen) && (cClose > pOpen) && (cOpen < pClose);
-      const isBearishEngulfing = (pClose > pOpen) && (cClose < cOpen) && (cClose < pOpen) && (cOpen > pClose);
-      const isHammer = (lowerWick > cBody * 2) && (upperWick < cBody * 0.5);
-      const isShootingStar = (upperWick > cBody * 2) && (lowerWick < cBody * 0.5);
-      const isDoji = (cBody / cRange) < 0.1;
-
-      if (isBullishEngulfing) return "Bullish Engulfing";
-      if (isBearishEngulfing) return "Bearish Engulfing";
-      if (isHammer) return "Bullish Reversal Pinbar";
-      if (isShootingStar) return "Bearish Reversal Pinbar";
-      if (isDoji) return "Doji Indecision";
-      return cClose >= cOpen ? "Bullish M15 Bar" : "Bearish M15 Bar";
-    }
-
-    function evaluateChart(m, rawCandles) {
-      if (!rawCandles || rawCandles.length < 50) return;
-
-      const closes = rawCandles.map(c => Number(c.close));
-      const currentPrice = closes[closes.length - 1];
-      const m15Open = Number(rawCandles[rawCandles.length - 1].open);
-      
-      const pctChange = (((currentPrice - m15Open) / m15Open) * 100).toFixed(2);
+      const changePct = (((price - openPrice) / openPrice) * 100).toFixed(2);
       const rsi = calculateRSI(closes, 14);
       const ema50 = calculateEMA(closes, 50);
-      const atr = calculateATR(rawCandles, 14);
-      const pattern = detectCandlePattern(rawCandles);
 
-      const distFromEmaPct = Math.abs((currentPrice - ema50) / ema50) * 100;
-      const trendStrength = Math.min(100, Math.round(distFromEmaPct * 80));
+      let s = state[m.symbol];
+      s.price = price;
+      s.m15ChangePct = changePct;
+      s.rsi = rsi;
+      s.ema50 = ema50;
 
-      let state = marketState[m.symbol];
-      state.price = currentPrice;
-      state.m15ChangePct = pctChange;
-      state.trendStrength = trendStrength;
-      state.rsi = rsi;
-      state.ema50 = ema50;
-      state.pattern = pattern;
-      state.entry = currentPrice.toFixed(m.digits);
-
-      const isBullishTrend = currentPrice > ema50;
-      const isBearishTrend = currentPrice < ema50;
-      const isBullishReversal = pattern.includes("Bullish") || closes[closes.length - 1] > closes[closes.length - 2];
-      const isBearishReversal = pattern.includes("Bearish") || closes[closes.length - 1] < closes[closes.length - 2];
-
-      if (isBullishTrend && rsi <= 38 && isBullishReversal) {
-        state.action = "BUY";
-        state.tp = (currentPrice + (atr * 2.0)).toFixed(m.digits);
-        state.sl = (currentPrice - (atr * 1.0)).toFixed(m.digits);
-      } else if (isBearishTrend && rsi >= 62 && isBearishReversal) {
-        state.action = "SELL";
-        state.tp = (currentPrice - (atr * 2.0)).toFixed(m.digits);
-        state.sl = (currentPrice + (atr * 1.0)).toFixed(m.digits);
-      } else {
-        state.action = "WAIT";
-        state.tp = "—";
-        state.sl = "—";
-      }
-
-      if (state.action !== "WAIT" && state.action !== state.lastAlertState) {
-        playBeep(state.action);
-        state.lastAlertState = state.action;
-      } else if (state.action === "WAIT") {
-        state.lastAlertState = "WAIT";
-      }
+      if (price > ema50 && rsi <= 42) s.signal = "BUY";
+      else if (price < ema50 && rsi >= 58) s.signal = "SELL";
+      else s.signal = "WAIT";
     }
 
-    function renderUI() {
-      const container = document.getElementById("signal-container");
-      const filtered = MARKETS.filter(m => activeCategory === 'ALL' || m.group === activeCategory);
-
-      container.innerHTML = filtered.map(m => {
-        let state = marketState[m.symbol];
-        let cardClass = state.action === "BUY" ? "buy-setup" : (state.action === "SELL" ? "sell-setup" : "");
-        let badgeClass = state.action === "BUY" ? "badge-buy" : (state.action === "SELL" ? "badge-sell" : "badge-wait");
-        let pctClass = Number(state.m15ChangePct) >= 0 ? "pct-up" : "pct-down";
+    function render() {
+      const container = document.getElementById("card-container");
+      container.innerHTML = MARKETS.map(m => {
+        let s = state[m.symbol];
+        let cardClass = s.signal === "BUY" ? "buy" : (s.signal === "SELL" ? "sell" : "");
+        let pillClass = s.signal === "BUY" ? "pill-buy" : (s.signal === "SELL" ? "pill-sell" : "pill-wait");
+        let pctClass = Number(s.m15ChangePct) >= 0 ? "up" : "down";
 
         return `
-          <div class="signal-card ${cardClass}">
-            <div class="card-header">
-              <div>
-                <div class="market-name">${m.name}</div>
-                <div class="pattern-tag">${state.pattern}</div>
-              </div>
-              <span class="action-badge ${badgeClass}">M15 ${state.action}</span>
+          <div class="card ${cardClass}">
+            <div class="card-head">
+              <span class="symbol-title">${m.name}</span>
+              <span class="signal-pill ${pillClass}">M15 ${s.signal}</span>
             </div>
 
-            <div class="metrics-grid">
-              <span>Price: <b>${state.price ? state.price.toFixed(m.digits) : 'Fetching...'}</b></span>
-              <span>M15 Change: <b class="${pctClass}">${state.m15ChangePct}%</b></span>
-              <span>RSI (14): <b>${state.rsi}</b></span>
-              <span>50 EMA: <b>${state.ema50 ? state.ema50.toFixed(m.digits) : '...'}</b></span>
-              <span style="grid-column: span 2;">
-                Trend Momentum: <b>${state.price > state.ema50 ? 'Bullish' : 'Bearish'} (${state.trendStrength}%)</b>
-                <div class="progress-bar-bg">
-                  <div class="progress-bar-fill" style="width: ${state.trendStrength}%;"></div>
-                </div>
-              </span>
-            </div>
-
-            <div class="levels-grid">
-              <div><b>Entry Level</b>${state.entry}</div>
-              <div><b>Take Profit</b>${state.tp}</div>
-              <div><b>Stop Loss</b>${state.sl}</div>
+            <div class="data-grid">
+              <span>Price: <b>${s.price ? s.price.toFixed(m.digits) : 'Syncing...'}</b></span>
+              <span>M15 Shift: <b class="${pctClass}">${s.m15ChangePct}%</b></span>
+              <span>RSI (14): <b>${s.rsi}</b></span>
+              <span>50 EMA: <b>${s.ema50 ? s.ema50.toFixed(m.digits) : '...'}</b></span>
+              <span style="grid-column: span 2;">Live Ticks Streamed: <b>${s.ticks}</b></span>
             </div>
           </div>
         `;
       }).join('');
     }
 
-    function connectWebSocket() {
-      if (pingInterval) clearInterval(pingInterval);
+    function connect() {
+      if (ws) ws.close();
 
-      // Primary Deriv WebSocket Server
-      const ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=1089");
+      const tag = document.getElementById("status-tag");
+      const text = document.getElementById("status-text");
+
+      tag.className = "status-badge";
+      text.innerText = "CONNECTING...";
+      printLog("Connecting to WebSocket server...");
+
+      ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=1089");
 
       ws.onopen = () => {
-        document.getElementById("conn-dot").className = "dot";
-        document.getElementById("conn-text").innerText = "M15 FEED LIVE";
+        tag.className = "status-badge online";
+        text.innerText = "STREAM LIVE";
+        printLog("Connected! Subscribing to market channels...");
 
-        // Heartbeat Ping every 15s to keep websocket alive
-        pingInterval = setInterval(() => {
-          if (ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ ping: 1 }));
-          }
-        }, 15000);
-
-        // Stagger Requests by 150ms to prevent rate limiting
-        MARKETS.forEach((m, idx) => {
+        // Queue-based subscription logic (300ms delay per market to respect rate limits)
+        MARKETS.forEach((m, index) => {
           setTimeout(() => {
-            if (ws.readyState === WebSocket.OPEN) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              // Subscribe directly to live ticks
+              ws.send(JSON.stringify({ ticks: m.symbol }));
+              
+              // Request M15 historical candles
               ws.send(JSON.stringify({
                 ticks_history: m.symbol,
                 adjust_start_time: 1,
-                count: 70,
+                count: 50,
                 end: "latest",
                 granularity: 900,
                 style: "candles"
               }));
-              ws.send(JSON.stringify({ ticks: m.symbol, subscribe: 1 }));
+              printLog(`Subscribed: ${m.name}`);
             }
-          }, idx * 150);
+          }, index * 300);
         });
       };
 
-      ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
+      ws.onmessage = (e) => {
+        const data = JSON.parse(e.data);
 
-        if (data.error) {
-          console.warn("Deriv WS Warning:", data.error.message);
-          return;
-        }
-
-        if (data.msg_type === "candles" && data.candles) {
+        if (data.msg_type === "candles") {
           const symbol = data.echo_req.ticks_history;
-          if (marketState[symbol]) {
-            marketState[symbol].candles = data.candles;
-            const mObj = MARKETS.find(x => x.symbol === symbol);
-            if (mObj) evaluateChart(mObj, marketState[symbol].candles);
-            renderUI();
+          if (state[symbol]) {
+            state[symbol].candles = data.candles;
+            const m = MARKETS.find(x => x.symbol === symbol);
+            if (m) analyze(m, state[symbol].candles);
+            render();
           }
         }
 
-        if (data.msg_type === "tick" && data.tick) {
+        if (data.msg_type === "tick") {
+          ticksReceived++;
           const symbol = data.tick.symbol;
           const price = Number(data.tick.quote);
-          if (marketState[symbol] && marketState[symbol].candles.length > 0) {
-            marketState[symbol].price = price;
-            let activeCandle = marketState[symbol].candles[marketState[symbol].candles.length - 1];
-            activeCandle.close = price;
-            if (price > Number(activeCandle.high)) activeCandle.high = price;
-            if (price < Number(activeCandle.low)) activeCandle.low = price;
 
-            const mObj = MARKETS.find(x => x.symbol === symbol);
-            if (mObj) evaluateChart(mObj, marketState[symbol].candles);
-            renderUI();
+          if (state[symbol]) {
+            state[symbol].price = price;
+            state[symbol].ticks++;
+
+            if (state[symbol].candles.length > 0) {
+              let lastCandle = state[symbol].candles[state[symbol].candles.length - 1];
+              lastCandle.close = price;
+              if (price > Number(lastCandle.high)) lastCandle.high = price;
+              if (price < Number(lastCandle.low)) lastCandle.low = price;
+
+              const m = MARKETS.find(x => x.symbol === symbol);
+              if (m) analyze(m, state[symbol].candles);
+            }
+            render();
           }
         }
       };
 
-      ws.onerror = () => {
-        document.getElementById("conn-dot").className = "dot offline";
-        document.getElementById("conn-text").innerText = "CONNECT ERROR";
+      ws.onerror = (err) => {
+        tag.className = "status-badge error";
+        text.innerText = "ERROR";
+        printLog("Socket connection error encountered.");
       };
 
       ws.onclose = () => {
-        document.getElementById("conn-dot").className = "dot connecting";
-        document.getElementById("conn-text").innerText = "RECONNECTING...";
-        if (pingInterval) clearInterval(pingInterval);
-        setTimeout(connectWebSocket, 3000);
+        tag.className = "status-badge";
+        text.innerText = "DISCONNECTED";
+        printLog("Connection closed.");
       };
     }
 
-    renderUI();
-    connectWebSocket();
+    function reconnect() {
+      connect();
+    }
+
+    render();
+    connect();
   </script>
 </body>
 </html>
