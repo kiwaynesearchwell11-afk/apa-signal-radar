@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>M15 Pro Trading Scanner</title>
+  <title>MT5 M15 Strategy Reader - Live Scanner</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -11,9 +11,9 @@
       background-color: #0b0f19;
       color: #f1f5f9;
       padding: 16px;
-      max-width: 500px;
+      max-width: 520px;
       margin: 0 auto;
-      padding-bottom: 50px;
+      padding-bottom: 60px;
     }
     .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
     .header h1 { font-size: 1.15rem; font-weight: 800; letter-spacing: 0.5px; color: #ffffff; }
@@ -59,7 +59,6 @@
       display: flex;
       flex-direction: column;
       gap: 10px;
-      transition: all 0.2s ease-in-out;
     }
     .signal-card.buy-setup { border-color: #059669; background: #061a14; }
     .signal-card.sell-setup { border-color: #e11d48; background: #220d13; }
@@ -103,14 +102,14 @@
 <body>
 
   <div class="header">
-    <h1>M15 Market Scanner</h1>
+    <h1>MT5 M15 Strategy Reader</h1>
     <div class="status-pill"><div class="dot" id="conn-dot"></div><span id="conn-text">Connecting</span></div>
   </div>
 
   <div class="timer-card">
     <div>
       <div class="lbl">M15 Candle Close Countdown</div>
-      <div style="font-size: 0.6rem; color: #6b7280;">Real-time 15-minute timeframe tracking</div>
+      <div style="font-size: 0.6rem; color: #6b7280;">Real-time MT5 timeframe emulation</div>
     </div>
     <div class="clock" id="m15-countdown">15:00</div>
   </div>
@@ -126,20 +125,20 @@
 
   <script>
     const MARKETS = [
-      { symbol: "R_10", name: "Volatility 10 Index", group: "STD", digits: 2, atr: 1.5 },
-      { symbol: "R_25", name: "Volatility 25 Index", group: "STD", digits: 2, atr: 3.0 },
-      { symbol: "R_50", name: "Volatility 50 Index", group: "STD", digits: 2, atr: 6.0 },
-      { symbol: "R_75", name: "Volatility 75 Index", group: "STD", digits: 2, atr: 10.0 },
-      { symbol: "R_100", name: "Volatility 100 Index", group: "STD", digits: 2, atr: 14.0 },
-      { symbol: "1HZ10V", name: "Volatility 10 (1s)", group: "1S", digits: 2, atr: 1.2 },
-      { symbol: "1HZ25V", name: "Volatility 25 (1s)", group: "1S", digits: 2, atr: 2.5 },
-      { symbol: "1HZ50V", name: "Volatility 50 (1s)", group: "1S", digits: 2, atr: 5.5 },
-      { symbol: "1HZ75V", name: "Volatility 75 (1s)", group: "1S", digits: 2, atr: 9.0 },
-      { symbol: "1HZ100V", name: "Volatility 100 (1s)", group: "1S", digits: 2, atr: 12.5 },
-      { symbol: "stpRNG", name: "Step Index", group: "ELITE", digits: 2, atr: 5.0 },
-      { symbol: "JD10", name: "Jump 10 Index", group: "ELITE", digits: 2, atr: 15.0 },
-      { symbol: "JD50", name: "Jump 50 Index", group: "ELITE", digits: 2, atr: 30.0 },
-      { symbol: "JD75", name: "Jump 75 Index", group: "ELITE", digits: 2, atr: 45.0 }
+      { symbol: "R_10", name: "Volatility 10 Index", group: "STD", digits: 2 },
+      { symbol: "R_25", name: "Volatility 25 Index", group: "STD", digits: 2 },
+      { symbol: "R_50", name: "Volatility 50 Index", group: "STD", digits: 2 },
+      { symbol: "R_75", name: "Volatility 75 Index", group: "STD", digits: 2 },
+      { symbol: "R_100", name: "Volatility 100 Index", group: "STD", digits: 2 },
+      { symbol: "1HZ10V", name: "Volatility 10 (1s)", group: "1S", digits: 2 },
+      { symbol: "1HZ25V", name: "Volatility 25 (1s)", group: "1S", digits: 2 },
+      { symbol: "1HZ50V", name: "Volatility 50 (1s)", group: "1S", digits: 2 },
+      { symbol: "1HZ75V", name: "Volatility 75 (1s)", group: "1S", digits: 2 },
+      { symbol: "1HZ100V", name: "Volatility 100 (1s)", group: "1S", digits: 2 },
+      { symbol: "stpRNG", name: "Step Index", group: "ELITE", digits: 2 },
+      { symbol: "JD10", name: "Jump 10 Index", group: "ELITE", digits: 2 },
+      { symbol: "JD50", name: "Jump 50 Index", group: "ELITE", digits: 2 },
+      { symbol: "JD75", name: "Jump 75 Index", group: "ELITE", digits: 2 }
     ];
 
     const marketState = {};
@@ -150,7 +149,7 @@
       marketState[m.symbol] = {
         price: 0,
         rsi: 50,
-        trend: "Analyzing...",
+        ema50: 0,
         action: "WAIT",
         entry: "0.00",
         tp: "0.00",
@@ -166,6 +165,7 @@
       renderUI();
     }
 
+    // Mathematical RSI Calculation (14 period)
     function calculateRSI(closes, period = 14) {
       if (closes.length < period + 1) return 50;
       let gains = 0, losses = 0;
@@ -181,31 +181,64 @@
       return Math.round(100 - (100 / (1 + rs)));
     }
 
-    function analyzeMarket(m, closes) {
-      if (closes.length < 15) return;
+    // Mathematical Exponential Moving Average (EMA 50)
+    function calculateEMA(closes, period = 50) {
+      if (closes.length === 0) return 0;
+      let k = 2 / (period + 1);
+      let ema = closes[0];
+      for (let i = 1; i < closes.length; i++) {
+        ema = (closes[i] * k) + (ema * (1 - k));
+      }
+      return ema;
+    }
 
+    // Mathematical Average True Range (ATR 14)
+    function calculateATR(candles, period = 14) {
+      if (candles.length < period + 1) return 1.0;
+      let trs = [];
+      for (let i = 1; i < candles.length; i++) {
+        let high = candles[i].high || candles[i].close;
+        let low = candles[i].low || candles[i].close;
+        let prevClose = candles[i - 1].close;
+        let tr = Math.max(high - low, Math.abs(high - prevClose), Math.abs(low - prevClose));
+        trs.push(tr);
+      }
+      let recentTrs = trs.slice(-period);
+      let sum = recentTrs.reduce((a, b) => a + b, 0);
+      return sum / recentTrs.length;
+    }
+
+    function evaluateMT5Strategy(m, rawCandles) {
+      if (!rawCandles || rawCandles.length < 55) return;
+
+      const closes = rawCandles.map(c => Number(c.close));
       const currentPrice = closes[closes.length - 1];
       const rsi = calculateRSI(closes, 14);
-      
-      // M15 structure check comparing current candle to 3 candles ago
-      const recentShift = closes[closes.length - 1] - closes[closes.length - 4];
-      const structure = recentShift > 0 ? "Bullish Push" : "Bearish Drop";
+      const ema50 = calculateEMA(closes, 50);
+      const atr = calculateATR(rawCandles, 14);
 
       let state = marketState[m.symbol];
       state.price = currentPrice;
       state.rsi = rsi;
-      state.trend = structure;
+      state.ema50 = ema50;
       state.entry = currentPrice.toFixed(m.digits);
 
-      // Trading Signal Trigger Logic based on M15 RSI Oversold/Overbought + Momentum alignment
-      if (rsi <= 38 && recentShift > 0) {
+      // Strict MT5 M15 Strategy Rule Set:
+      // BUY: Price above 50 EMA (Bullish Trend), RSI dips <= 35 (Oversold pullback), and latest close is higher than prior close.
+      // SELL: Price below 50 EMA (Bearish Trend), RSI spikes >= 65 (Overbought pullback), and latest close is lower than prior close.
+      const isBullishTrend = currentPrice > ema50;
+      const isBearishTrend = currentPrice < ema50;
+      const isPullbackReversingUp = closes[closes.length - 1] > closes[closes.length - 2];
+      const isPullbackReversingDown = closes[closes.length - 1] < closes[closes.length - 2];
+
+      if (isBullishTrend && rsi <= 35 && isPullbackReversingUp) {
         state.action = "BUY";
-        state.tp = (currentPrice + (m.atr * 2.5)).toFixed(m.digits);
-        state.sl = (currentPrice - (m.atr * 1.2)).toFixed(m.digits);
-      } else if (rsi >= 62 && recentShift < 0) {
+        state.tp = (currentPrice + (atr * 2.5)).toFixed(m.digits);
+        state.sl = (currentPrice - (atr * 1.5)).toFixed(m.digits);
+      } else if (isBearishTrend && rsi >= 65 && isPullbackReversingDown) {
         state.action = "SELL";
-        state.tp = (currentPrice - (m.atr * 2.5)).toFixed(m.digits);
-        state.sl = (currentPrice + (m.atr * 1.2)).toFixed(m.digits);
+        state.tp = (currentPrice - (atr * 2.5)).toFixed(m.digits);
+        state.sl = (currentPrice + (atr * 1.5)).toFixed(m.digits);
       } else {
         state.action = "WAIT";
         state.tp = "—";
@@ -230,8 +263,9 @@
             </div>
             <div class="metrics-grid">
               <span>Price: <b>${state.price ? state.price.toFixed(m.digits) : 'Loading...'}</b></span>
-              <span>RSI (14): <b>${state.rsi}</b></span>
-              <span style="grid-column: span 2;">M15 Structure: <b>${state.trend}</b></span>
+              <span>RSI(14): <b>${state.rsi}</b></span>
+              <span>50 EMA: <b>${state.ema50 ? state.ema50.toFixed(m.digits) : '...'}</b></span>
+              <span>Trend: <b>${state.price > state.ema50 ? 'Bullish' : 'Bearish'}</b></span>
             </div>
             <div class="levels-grid">
               <div><b>Entry Price</b>${state.entry}</div>
@@ -259,19 +293,17 @@
 
       ws.onopen = () => {
         document.getElementById("conn-dot").className = "dot";
-        document.getElementById("conn-text").innerText = "M15 FEED LIVE";
+        document.getElementById("conn-text").innerText = "MT5 FEED LIVE";
 
-        // Request historical 15-min candles (granularity 900 seconds = 15 minutes) for each market
         MARKETS.forEach(m => {
           ws.send(JSON.stringify({
             ticks_history: m.symbol,
             adjust_start_time: 1,
-            count: 30,
+            count: 70,
             end: "latest",
             granularity: 900,
             style: "candles"
           }));
-          // Subscribe to live tick updates to update the current forming M15 candle in real-time
           ws.send(JSON.stringify({ ticks: m.symbol, subscribe: 1 }));
         });
       };
@@ -282,9 +314,9 @@
         if (data.msg_type === "candles" && data.candles) {
           const symbol = data.echo_req.ticks_history;
           if (marketState[symbol]) {
-            marketState[symbol].candles = data.candles.map(c => Number(c.close));
+            marketState[symbol].candles = data.candles;
             const mObj = MARKETS.find(x => x.symbol === symbol);
-            if (mObj) analyzeMarket(mObj, marketState[symbol].candles);
+            if (mObj) evaluateMT5Strategy(mObj, marketState[symbol].candles);
             renderUI();
           }
         }
@@ -294,10 +326,13 @@
           const price = data.tick.quote;
           if (marketState[symbol] && marketState[symbol].candles.length > 0) {
             marketState[symbol].price = price;
-            // Update the latest active closing candle price in real-time
-            marketState[symbol].candles[marketState[symbol].candles.length - 1] = price;
+            let currentCandle = marketState[symbol].candles[marketState[symbol].candles.length - 1];
+            currentCandle.close = price;
+            if (price > currentCandle.high) currentCandle.high = price;
+            if (price < currentCandle.low) currentCandle.low = price;
+
             const mObj = MARKETS.find(x => x.symbol === symbol);
-            if (mObj) analyzeMarket(mObj, marketState[symbol].candles);
+            if (mObj) evaluateMT5Strategy(mObj, marketState[symbol].candles);
             renderUI();
           }
         }
