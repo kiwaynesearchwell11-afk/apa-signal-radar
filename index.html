@@ -149,7 +149,7 @@
 
   <div class="header">
     <h1>A.P.A. PRO</h1>
-    <div class="bot-badge"><div class="dot"></div> 15M TF LOCKED</div>
+    <div class="bot-badge"><div class="dot"></div> <span id="connection-status">CONNECTING WS...</span></div>
   </div>
 
   <button class="notify-btn" id="notify-btn" onclick="requestNotificationPermission()">
@@ -157,7 +157,7 @@
   </button>
 
   <div class="tf-indicator-box">
-    <span>ACTIVE TIMEFRAME: M15 (15-Minute Candle Close)</span>
+    <span>ACTIVE TIMEFRAME: M15 (Real Market Data)</span>
     <span id="candle-timer" style="font-family: monospace;">14:59</span>
   </div>
 
@@ -168,7 +168,7 @@
   </div>
 
   <div class="activity-ticker" id="activity-ticker">
-    <span>[SYSTEM]:</span> Monitoring 15-minute candle structure for clean multi-indicator breakouts...
+    <span>[SYSTEM]:</span> Connecting to Deriv Live WebSocket Server...
   </div>
 
   <div class="metrics-grid">
@@ -182,7 +182,7 @@
       <span id="log-count" style="color: #38ef7d;">0 recorded</span>
     </div>
     <div class="history-list" id="history-log-container">
-      <div style="color: #64748b;">Waiting for 15-minute candle close confirmation...</div>
+      <div style="color: #64748b;">Waiting for candle data sync...</div>
     </div>
   </div>
 
@@ -199,7 +199,7 @@
   <div class="closest-card">
     <div class="closest-left">
       <div class="label">CLOSEST TO M15 SETUP</div>
-      <div class="val" id="closest-asset">Scanning...</div>
+      <div class="val" id="closest-asset">Syncing Feeds...</div>
     </div>
     <div class="closest-right">
       <div class="label">STATUS</div>
@@ -212,46 +212,39 @@
     const TELEGRAM_CHAT_ID = "5913949259";
 
     let currentFilter = 'ALL';
-    let candleSecondsLeft = 900; // 15 minutes in seconds
+    let ws = null;
 
     const MARKETS = [
-      { id: "01", symbol: "R_10", name: "Volatility 10 Index", group: "VOL", base: 1200, digits: 2 },
-      { id: "02", symbol: "R_25", name: "Volatility 25 Index", group: "VOL", base: 2400, digits: 2 },
-      { id: "03", symbol: "R_50", name: "Volatility 50 Index", group: "VOL", base: 5100, digits: 2 },
-      { id: "04", symbol: "R_75", name: "Volatility 75 Index", group: "VOL", base: 7800, digits: 2 },
-      { id: "05", symbol: "R_100", name: "Volatility 100 Index", group: "VOL", base: 10500, digits: 2 },
-      { id: "06", symbol: "1HZ10V", name: "Volatility 10 (1s)", group: "VOL", base: 1050, digits: 2 },
-      { id: "07", symbol: "1HZ25V", name: "Volatility 25 (1s)", group: "VOL", base: 2200, digits: 2 },
-      { id: "08", symbol: "1HZ50V", name: "Volatility 50 (1s)", group: "VOL", base: 4900, digits: 2 },
-      { id: "09", symbol: "1HZ75V", name: "Volatility 75 (1s)", group: "VOL", base: 7200, digits: 2 },
-      { id: "10", symbol: "1HZ100V", name: "Volatility 100 (1s)", group: "VOL", base: 9800, digits: 2 },
-      { id: "11", symbol: "stpRNG", name: "Step Index", group: "ELITE", base: 5000, digits: 2 },
-      { id: "12", symbol: "JD75", name: "Jump 75 Index", group: "ELITE", base: 45000, digits: 2 }
+      { id: "01", symbol: "R_10", name: "Volatility 10 Index", group: "VOL", digits: 2 },
+      { id: "02", symbol: "R_25", name: "Volatility 25 Index", group: "VOL", digits: 2 },
+      { id: "03", symbol: "R_50", name: "Volatility 50 Index", group: "VOL", digits: 2 },
+      { id: "04", symbol: "R_75", name: "Volatility 75 Index", group: "VOL", digits: 2 },
+      { id: "05", symbol: "R_100", name: "Volatility 100 Index", group: "VOL", digits: 2 },
+      { id: "06", symbol: "1HZ10V", name: "Volatility 10 (1s)", group: "VOL", digits: 2 },
+      { id: "07", symbol: "1HZ25V", name: "Volatility 25 (1s)", group: "VOL", digits: 2 },
+      { id: "08", symbol: "1HZ50V", name: "Volatility 50 (1s)", group: "VOL", digits: 2 },
+      { id: "09", symbol: "1HZ75V", name: "Volatility 75 (1s)", group: "VOL", digits: 2 },
+      { id: "10", symbol: "1HZ100V", name: "Volatility 100 (1s)", group: "VOL", digits: 2 },
+      { id: "11", symbol: "stpRNG", name: "Step Index", group: "ELITE", digits: 2 },
+      { id: "12", symbol: "JD75", name: "Jump 75 Index", group: "ELITE", digits: 2 }
     ];
 
     const marketState = {};
     const signalLogs = [];
 
     MARKETS.forEach(m => {
-      let dummyCandles = [];
-      let p = m.base;
-      for(let i=0; i<35; i++) {
-        p += (Math.random() - 0.49) * (m.base * 0.002);
-        dummyCandles.push(p);
-      }
-
       marketState[m.symbol] = { 
         status: "WAITING", 
-        currentPrice: m.base,
+        currentPrice: 0,
         type: "BUY",
         rsi: 50,
         macd: "Neutral",
         score: 40,
-        entry: m.base.toFixed(m.digits),
-        tp: (m.base * 1.01).toFixed(m.digits),
-        sl: (m.base * 0.995).toFixed(m.digits),
+        entry: "0.00",
+        tp: "0.00",
+        sl: "0.00",
         lastAlertTime: 0,
-        candles: dummyCandles
+        candles: []
       };
     });
 
@@ -322,9 +315,11 @@
     }
 
     function analyzeMarket(symbol) {
+      let m = MARKETS.find(x => x.symbol === symbol);
       let state = marketState[symbol];
-      let closes = state.candles;
+      if (!state.candles || state.candles.length < 20) return;
       
+      let closes = state.candles.map(c => Number(c.close));
       let rsi = calculateRSI(closes, 14);
       state.rsi = rsi;
 
@@ -340,7 +335,6 @@
         state.type = "SELL";
       }
 
-      // M15 strict filter thresholds
       let score = 50;
       if (state.type === "BUY" && rsi <= 38) {
         score = 90; 
@@ -351,6 +345,19 @@
       }
 
       state.score = score;
+      
+      let price = state.currentPrice;
+      state.entry = price.toFixed(m.digits);
+
+      // Accurate proportional TP/SL based on asset type and real price level
+      let riskOffset = price * 0.0012; 
+      if (state.type === "BUY") {
+        state.tp = (price + (riskOffset * 2)).toFixed(m.digits);
+        state.sl = (price - riskOffset).toFixed(m.digits);
+      } else {
+        state.tp = (price - (riskOffset * 2)).toFixed(m.digits);
+        state.sl = (price + riskOffset).toFixed(m.digits);
+      }
     }
 
     function recordSignalLog(name, symbol, type, rsi) {
@@ -366,7 +373,7 @@
     function triggerNotifications(name, symbol, type, entry, tp, sl, rsi) {
       let state = marketState[symbol];
       let now = Date.now();
-      let cooldownMs = 60000; // 1-minute safety lock
+      let cooldownMs = 60000;
 
       if (now - state.lastAlertTime > cooldownMs) {
         state.lastAlertTime = now; 
@@ -488,51 +495,93 @@
       document.getElementById("closest-status").innerText = marketState[closestAsset.symbol].status;
     }
 
-    // 15-Minute timer display loop
+    // Accurate real-world M15 timer calculation based on epoch time
     function updateTimerDisplay() {
-      let mins = Math.floor(candleSecondsLeft / 60);
-      let secs = candleSecondsLeft % 60;
+      const nowSecs = Math.floor(Date.now() / 1000);
+      const remainingSecs = 900 - (nowSecs % 900);
+      let mins = Math.floor(remainingSecs / 60);
+      let secs = remainingSecs % 60;
       document.getElementById("candle-timer").innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-      
-      if (candleSecondsLeft > 0) {
-        candleSecondsLeft--;
-      } else {
-        candleSecondsLeft = 900; // Reset 15m candle
-        logActivity("[M15]: New 15-minute candle closed. Re-evaluating indicators.");
-      }
     }
 
-    // Engine loop simulating M15 candle updates
-    function runConfluenceEngine() {
-      setInterval(() => {
-        const m = MARKETS[Math.floor(Math.random() * MARKETS.length)];
-        let state = marketState[m.symbol];
+    // Connect to Deriv WebSocket and stream actual market candles & ticks
+    function connectDerivWS() {
+      ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=1089");
 
-        let change = (Math.random() - 0.495) * (m.base * 0.0015);
-        state.currentPrice += change;
-        state.entry = state.currentPrice.toFixed(m.digits);
+      ws.onopen = () => {
+        document.getElementById("connection-status").innerText = "M15 TF LOCKED & LIVE";
+        logActivity("Connected to Deriv Server. Requesting M15 data feeds...");
 
-        let riskOffset = state.currentPrice * 0.0015;
-        if (state.type === "BUY") {
-          state.tp = (state.currentPrice + (riskOffset * 2)).toFixed(m.digits);
-          state.sl = (state.currentPrice - riskOffset).toFixed(m.digits);
-        } else {
-          state.tp = (state.currentPrice - (riskOffset * 2)).toFixed(m.digits);
-          state.sl = (state.currentPrice + riskOffset).toFixed(m.digits);
+        MARKETS.forEach((m, index) => {
+          setTimeout(() => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              // Subscribe to live tick stream
+              ws.send(JSON.stringify({ ticks: m.symbol }));
+              
+              // Request historical 15M candles (granularity: 900)
+              ws.send(JSON.stringify({
+                ticks_history: m.symbol,
+                adjust_start_time: 1,
+                count: 50,
+                end: "latest",
+                granularity: 900,
+                style: "candles"
+              }));
+            }
+          }, index * 350); // Stagger requests to bypass rate-limits
+        });
+      };
+
+      ws.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+
+        if (data.msg_type === "candles") {
+          const symbol = data.echo_req.ticks_history;
+          if (marketState[symbol]) {
+            marketState[symbol].candles = data.candles;
+            if (data.candles.length > 0) {
+              marketState[symbol].currentPrice = Number(data.candles[data.candles.length - 1].close);
+            }
+            analyzeMarket(symbol);
+            updateUIElements();
+          }
         }
 
-        state.candles.push(state.currentPrice);
-        if (state.candles.length > 40) state.candles.shift();
+        if (data.msg_type === "tick") {
+          const symbol = data.tick.symbol;
+          const price = Number(data.tick.quote);
 
-        analyzeMarket(m.symbol);
-        updateUIElements();
-      }, 1500);
+          if (marketState[symbol]) {
+            marketState[symbol].currentPrice = price;
+            let candles = marketState[symbol].candles;
 
-      setInterval(updateTimerDisplay, 1000);
+            if (candles.length > 0) {
+              let lastCandle = candles[candles.length - 1];
+              lastCandle.close = price;
+              if (price > Number(lastCandle.high)) lastCandle.high = price;
+              if (price < Number(lastCandle.low)) lastCandle.low = price;
+            }
+
+            analyzeMarket(symbol);
+            updateUIElements();
+          }
+        }
+      };
+
+      ws.onerror = () => {
+        document.getElementById("connection-status").innerText = "WS ERROR - RETRYING";
+        logActivity("WebSocket connection error. Attempting reconnect...");
+      };
+
+      ws.onclose = () => {
+        document.getElementById("connection-status").innerText = "DISCONNECTED";
+        setTimeout(connectDerivWS, 3000);
+      };
     }
 
     buildUI();
-    runConfluenceEngine();
+    connectDerivWS();
+    setInterval(updateTimerDisplay, 1000);
   </script>
 </body>
 </html>
