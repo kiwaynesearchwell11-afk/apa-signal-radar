@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>M15 Pro Chart Analyzer & Signal Scanner</title>
+  <title>M15 Live Chart Analyzer & Signal Scanner</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -21,6 +21,7 @@
     .status-pill { font-size: 0.68rem; font-weight: 700; padding: 5px 12px; border-radius: 12px; background: #131d31; color: #38ef7d; border: 1px solid #22324e; display: flex; align-items: center; gap: 6px; }
     .dot { width: 7px; height: 7px; background-color: #38ef7d; border-radius: 50%; }
     .dot.offline { background-color: #ef4444; }
+    .dot.connecting { background-color: #f59e0b; }
 
     .sound-toggle {
       background: #131d31;
@@ -35,6 +36,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      width: 100%;
     }
     .sound-toggle.active { color: #38ef7d; border-color: #059669; }
 
@@ -84,6 +86,7 @@
       border: 1px solid rgba(56, 189, 248, 0.25);
       padding: 3px 8px;
       border-radius: 4px;
+      margin-top: 2px;
     }
 
     .metrics-grid {
@@ -107,7 +110,7 @@
       background: #1c273e;
       border-radius: 2px;
       overflow: hidden;
-      margin-top: 2px;
+      margin-top: 4px;
     }
     .progress-bar-fill {
       height: 100%;
@@ -135,7 +138,7 @@
 
   <div class="header">
     <h1>M15 Live Chart Analyzer</h1>
-    <div class="status-pill"><div class="dot" id="conn-dot"></div><span id="conn-text">Connecting</span></div>
+    <div class="status-pill"><div class="dot connecting" id="conn-dot"></div><span id="conn-text">INITIALIZING</span></div>
   </div>
 
   <button class="sound-toggle active" id="audio-btn" onclick="toggleAudio()">
@@ -174,6 +177,7 @@
     let activeCategory = 'ALL';
     let audioEnabled = true;
     let audioCtx = null;
+    let pingInterval = null;
 
     MARKETS.forEach(m => {
       marketState[m.symbol] = {
@@ -182,7 +186,7 @@
         trendStrength: 0,
         rsi: 50,
         ema50: 0,
-        pattern: "Analyzing...",
+        pattern: "Waiting Feed...",
         action: "WAIT",
         entry: "0.00",
         tp: "0.00",
@@ -267,7 +271,6 @@
       return recentTrs.reduce((a, b) => a + b, 0) / recentTrs.length;
     }
 
-    // Pattern Recognition Engine for M15 Candlesticks
     function detectCandlePattern(candles) {
       if (candles.length < 2) return "Standard Candle";
       const curr = candles[candles.length - 1];
@@ -299,21 +302,18 @@
     }
 
     function evaluateChart(m, rawCandles) {
-      if (!rawCandles || rawCandles.length < 55) return;
+      if (!rawCandles || rawCandles.length < 50) return;
 
       const closes = rawCandles.map(c => Number(c.close));
       const currentPrice = closes[closes.length - 1];
       const m15Open = Number(rawCandles[rawCandles.length - 1].open);
       
-      // Live M15 Candle Percentage Gain/Loss
       const pctChange = (((currentPrice - m15Open) / m15Open) * 100).toFixed(2);
-      
       const rsi = calculateRSI(closes, 14);
       const ema50 = calculateEMA(closes, 50);
       const atr = calculateATR(rawCandles, 14);
       const pattern = detectCandlePattern(rawCandles);
 
-      // Trend Strength Score (Normalized Distance from EMA)
       const distFromEmaPct = Math.abs((currentPrice - ema50) / ema50) * 100;
       const trendStrength = Math.min(100, Math.round(distFromEmaPct * 80));
 
@@ -345,7 +345,6 @@
         state.sl = "—";
       }
 
-      // Trigger Audio Alert on New Confirmed Signal
       if (state.action !== "WAIT" && state.action !== state.lastAlertState) {
         playBeep(state.action);
         state.lastAlertState = state.action;
@@ -375,7 +374,7 @@
             </div>
 
             <div class="metrics-grid">
-              <span>Price: <b>${state.price ? state.price.toFixed(m.digits) : 'Loading...'}</b></span>
+              <span>Price: <b>${state.price ? state.price.toFixed(m.digits) : 'Fetching...'}</b></span>
               <span>M15 Change: <b class="${pctClass}">${state.m15ChangePct}%</b></span>
               <span>RSI (14): <b>${state.rsi}</b></span>
               <span>50 EMA: <b>${state.ema50 ? state.ema50.toFixed(m.digits) : '...'}</b></span>
@@ -398,28 +397,48 @@
     }
 
     function connectWebSocket() {
+      if (pingInterval) clearInterval(pingInterval);
+
+      // Primary Deriv WebSocket Server
       const ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=1089");
 
       ws.onopen = () => {
         document.getElementById("conn-dot").className = "dot";
         document.getElementById("conn-text").innerText = "M15 FEED LIVE";
 
-        MARKETS.forEach(m => {
-          ws.send(JSON.stringify({
-            ticks_history: m.symbol,
-            adjust_start_time: 1,
-            count: 70,
-            end: "latest",
-            granularity: 900,
-            style: "candles"
-          }));
-          ws.send(JSON.stringify({ ticks: m.symbol, subscribe: 1 }));
+        // Heartbeat Ping every 15s to keep websocket alive
+        pingInterval = setInterval(() => {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ ping: 1 }));
+          }
+        }, 15000);
+
+        // Stagger Requests by 150ms to prevent rate limiting
+        MARKETS.forEach((m, idx) => {
+          setTimeout(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({
+                ticks_history: m.symbol,
+                adjust_start_time: 1,
+                count: 70,
+                end: "latest",
+                granularity: 900,
+                style: "candles"
+              }));
+              ws.send(JSON.stringify({ ticks: m.symbol, subscribe: 1 }));
+            }
+          }, idx * 150);
         });
       };
 
       ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        
+
+        if (data.error) {
+          console.warn("Deriv WS Warning:", data.error.message);
+          return;
+        }
+
         if (data.msg_type === "candles" && data.candles) {
           const symbol = data.echo_req.ticks_history;
           if (marketState[symbol]) {
@@ -432,13 +451,13 @@
 
         if (data.msg_type === "tick" && data.tick) {
           const symbol = data.tick.symbol;
-          const price = data.tick.quote;
+          const price = Number(data.tick.quote);
           if (marketState[symbol] && marketState[symbol].candles.length > 0) {
             marketState[symbol].price = price;
             let activeCandle = marketState[symbol].candles[marketState[symbol].candles.length - 1];
             activeCandle.close = price;
-            if (price > activeCandle.high) activeCandle.high = price;
-            if (price < activeCandle.low) activeCandle.low = price;
+            if (price > Number(activeCandle.high)) activeCandle.high = price;
+            if (price < Number(activeCandle.low)) activeCandle.low = price;
 
             const mObj = MARKETS.find(x => x.symbol === symbol);
             if (mObj) evaluateChart(mObj, marketState[symbol].candles);
@@ -449,12 +468,13 @@
 
       ws.onerror = () => {
         document.getElementById("conn-dot").className = "dot offline";
-        document.getElementById("conn-text").innerText = "ERROR";
+        document.getElementById("conn-text").innerText = "CONNECT ERROR";
       };
 
       ws.onclose = () => {
-        document.getElementById("conn-dot").className = "dot offline";
+        document.getElementById("conn-dot").className = "dot connecting";
         document.getElementById("conn-text").innerText = "RECONNECTING...";
+        if (pingInterval) clearInterval(pingInterval);
         setTimeout(connectWebSocket, 3000);
       };
     }
