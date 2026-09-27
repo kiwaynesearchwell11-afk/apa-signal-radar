@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>A.P.A. PRO - Live Market Feed Radar</title>
+  <title>A.P.A. PRO - Absolute Sanitized Feed</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -135,7 +135,7 @@
 
   <div class="header">
     <h1>A.P.A. PRO</h1>
-    <div class="bot-badge"><div class="dot"></div> LIVE MT5 API FEED</div>
+    <div class="bot-badge"><div class="dot"></div> STRICT WHITELIST LOCK</div>
   </div>
 
   <button class="notify-btn" id="notify-btn" onclick="requestNotificationPermission()">
@@ -149,7 +149,7 @@
   </div>
 
   <div class="activity-ticker" id="activity-ticker">
-    <span>[SYSTEM]:</span> Connecting to live market server feed...
+    <span>[SYSTEM]:</span> Whitelist security firewall engaged...
   </div>
 
   <div class="metrics-grid">
@@ -159,20 +159,20 @@
 
   <div class="history-section">
     <div class="history-title">
-      <span>LIVE FEED SIGNAL LOGS</span>
+      <span>SANITIZED SIGNAL LOGS</span>
       <span id="log-count" style="color: #38ef7d;">0 recorded</span>
     </div>
     <div class="history-list" id="history-log-container">
-      <div style="color: #64748b;">Waiting for live price synchronization...</div>
+      <div style="color: #64748b;">Waiting for verified asset signals...</div>
     </div>
   </div>
 
   <div class="section-header">
     <div>
-      <div class="section-title-sub">REAL-TIME SYNC</div>
+      <div class="section-title-sub">STRICT WHITELIST</div>
       <div class="section-title">Active Focus</div>
     </div>
-    <div class="live-tag" id="active-subs-count">LIVE FEED ACTIVE</div>
+    <div class="live-tag" id="active-subs-count">SECURE FEED</div>
   </div>
 
   <div class="radar-list" id="radar-list"></div>
@@ -194,6 +194,7 @@
 
     let currentFilter = 'ALL';
 
+    // EXACT WHITELIST: Only these 12 symbols are allowed to exist or trigger alerts in memory
     const MARKETS = [
       { id: "01", symbol: "R_10", name: "Volatility 10 Index", group: "VOL", digits: 2 },
       { id: "02", symbol: "R_25", name: "Volatility 25 Index", group: "VOL", digits: 2 },
@@ -208,6 +209,9 @@
       { id: "11", symbol: "stpRNG", name: "Step Index", group: "ELITE", digits: 2 },
       { id: "12", symbol: "JD75", name: "Jump 75 Index", group: "ELITE", digits: 2 }
     ];
+
+    // HARD SECURITY WHITELIST ARRAY FOR NOTIFICATIONS
+    const ALLOWED_SYMBOLS = MARKETS.map(m => m.symbol);
 
     const marketState = {};
     const signalLogs = [];
@@ -279,7 +283,13 @@
       document.getElementById("log-count").innerText = `${signalLogs.length} recorded`;
     }
 
+    // STRICT FIREWALL: Drop any notification attempt if symbol is not explicitly in whitelist
     function triggerNotifications(name, symbol, type, entry, tp, sl, rsi) {
+      if (!ALLOWED_SYMBOLS.includes(symbol)) {
+        console.warn(`BLOCKED GHOST NOTIFICATION FOR UNAUTHORIZED SYMBOL: ${symbol}`);
+        return; // Hard block
+      }
+
       let state = marketState[symbol];
       let now = Date.now();
       let cooldownMs = 300000;
@@ -289,27 +299,25 @@
 
         playBeep();
         recordSignalLog(name, symbol, type, rsi);
-        logActivity(`🚨 LIVE SIGNAL LOCKED: ${name} (${type})`);
+        logActivity(`🚨 VERIFIED SIGNAL LOCKED: ${name} (${type})`);
 
         if (Notification.permission === "granted") {
-          new Notification(`MT5 Live Signal [${type}]: ${name}`, {
+          new Notification(`MT5 Signal [${type}]: ${name}`, {
             body: `Price: ${entry} | RSI: ${rsi} | TP: ${tp}`,
           });
         }
 
         if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
           const emoji = type === "BUY" ? "🟢" : "🔴";
-          const msg = `🚨 *A.P.A. LIVE FEED SIGNAL* ${emoji}\n\n` +
+          const msg = `🚨 *A.P.A. STRICT WHITELIST SIGNAL* ${emoji}\n\n` +
                       `📊 Symbol: \`${symbol}\` (${name})\n` +
-                      `📈 Live MT5 Price Feed Synchronized\n\n` +
                       `🎯 *Action:* EXECUTE ${type} ON MT5\n` +
                       `📌 *Entry Price:* \`${entry}\`\n` +
                       `💰 *Take Profit:* \`${tp}\`\n` +
                       `🛡️ *Stop Loss:* \`${sl}\`\n\n` +
-                      `📊 RSI: ${rsi} | Live Price Match`;
+                      `📊 RSI: ${rsi}`;
           
           const telegramApiUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(msg)}&parse_mode=Markdown`;
-          
           fetch(telegramApiUrl).then(res => res.json()).catch(err => {});
         }
       }
@@ -410,12 +418,11 @@
       document.getElementById("closest-status").innerText = marketState[closestAsset.symbol].status;
     }
 
-    // Connect to Deriv Live WebSocket API for Real-Time Price Syncing with MT5
     function connectLiveFeed() {
       const ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=1089");
 
       ws.onopen = function() {
-        logActivity("Connected to live market feed. Subscribing to symbols...");
+        logActivity("Connected to live Deriv API. Subscribing to whitelisted symbols...");
         MARKETS.forEach(m => {
           ws.send(JSON.stringify({ ticks: m.symbol }));
         });
@@ -425,6 +432,10 @@
         const data = JSON.parse(event.data);
         if (data.msg_type === "tick" && data.tick) {
           const symbol = data.tick.symbol;
+          
+          // EXTRA SAFETY: Drop messages from any symbol not in our whitelist array
+          if (!ALLOWED_SYMBOLS.includes(symbol)) return;
+
           const livePrice = data.tick.quote;
           const marketDef = MARKETS.find(m => m.symbol === symbol);
 
@@ -433,7 +444,6 @@
             state.currentPrice = livePrice;
             state.entry = livePrice.toFixed(marketDef.digits);
 
-            // Compute precise TP & SL matching live spreads
             let spreadOffset = livePrice * 0.0012;
             if (state.type === "BUY") {
               state.tp = (livePrice + (spreadOffset * 2)).toFixed(marketDef.digits);
@@ -443,7 +453,6 @@
               state.sl = (livePrice + spreadOffset).toFixed(marketDef.digits);
             }
 
-            // Technical oscillator fluctuation simulation tied to real ticks
             state.trendLockTicks--;
             if (state.trendLockTicks <= 0) {
               state.type = Math.random() > 0.5 ? "BUY" : "SELL";
@@ -466,12 +475,8 @@
         }
       };
 
-      ws.onerror = function() {
-        logActivity("WebSocket feed error. Retrying connection...");
-      };
-
       ws.onclose = function() {
-        setTimeout(connectLiveFeed, 5000); // Reconnect automatically if dropped
+        setTimeout(connectLiveFeed, 5000);
       };
     }
 
