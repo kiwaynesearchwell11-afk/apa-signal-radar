@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>A.P.A. PRO - Thorough Market Scanner & Radar</title>
+  <title>A.P.A. PRO - Anti-Spam Scanner & Radar</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -150,7 +150,7 @@
 
   <div class="header">
     <h1>A.P.A. PRO</h1>
-    <div class="bot-badge"><div class="dot"></div> THOROUGH SCANNER</div>
+    <div class="bot-badge"><div class="dot"></div> ANTI-SPAM RADAR</div>
   </div>
 
   <button class="notify-btn" id="notify-btn" onclick="requestNotificationPermission()">
@@ -173,7 +173,7 @@
   </div>
 
   <div class="activity-ticker" id="activity-ticker">
-    <span>[SYSTEM]:</span> Thorough deep-scan engine initialized at 88% threshold...
+    <span>[SYSTEM]:</span> Anti-spam protection active (15-min cooldown per asset)...
   </div>
 
   <div class="metrics-grid">
@@ -193,7 +193,7 @@
 
   <div class="section-header">
     <div>
-      <div class="section-title-sub">DEEP SCANNER RADAR (88% THRESHOLD)</div>
+      <div class="section-title-sub">ANTI-SPAM RADAR (88% THRESHOLD)</div>
       <div class="section-title">Active Setups</div>
     </div>
     <div class="live-tag" id="active-subs-count">63 ACTIVE</div>
@@ -286,7 +286,7 @@
     ];
 
     const marketState = {};
-    const alertedMarkets = {};
+    const lastAlertTimes = {}; // Anti-spam cooldown ledger
     const signalLogs = [];
 
     MARKETS.forEach(m => {
@@ -362,13 +362,15 @@
     function triggerNotifications(name, symbol, percent, type, entry, tp, sl) {
       if (!entry || entry === "0.00" || !tp || tp === "0.00" || !sl || sl === "0.00") return;
 
-      if (!alertedMarkets[symbol]) {
-        alertedMarkets[symbol] = true;
-        setTimeout(() => { alertedMarkets[symbol] = false; }, 90000); // 90-sec cooldown
+      const now = Date.now();
+      const cooldownTime = 15 * 60 * 1000; // 15-minute anti-spam cooldown per asset
+
+      if (!lastAlertTimes[symbol] || (now - lastAlertTimes[symbol] > cooldownTime)) {
+        lastAlertTimes[symbol] = now; // Lock timestamp
 
         playBeep();
         recordSignalLog(name, symbol, type, percent);
-        logActivity(`🚨 BREAKOUT SIGNAL: ${name} (${percent}%)`);
+        logActivity(`🚨 UNIQUE BREAKOUT: ${name} (${percent}%)`);
 
         if (Notification.permission === "granted") {
           new Notification(`A.P.A. ${type} ALERT: ${name}`, {
@@ -515,9 +517,8 @@
       document.getElementById("closest-status").innerText = marketState[closestAsset.symbol].status;
     }
 
-    // Thorough Deep-Scan Engine with Tailored TP/SL Calculations
-    function startDeepScanEngine() {
-      logActivity("Deep-scanning 63 markets for precise entry calculations...");
+    function startAntiSpamEngine() {
+      logActivity("Anti-spam radar engine running (15 min per asset cooldown)...");
       setInterval(() => {
         MARKETS.forEach(m => {
           let state = marketState[m.symbol];
@@ -527,14 +528,11 @@
           let priceDelta = (Math.random() * 4 - 2) * (state.currentPrice * 0.0006);
           state.currentPrice += priceDelta;
           
-          // Determine Directional Bias
           state.type = priceDelta >= 0 ? "BUY" : "SELL";
           state.entry = state.currentPrice.toFixed(2);
 
-          // Accurate Risk-Reward Offsets based on Asset Class
           let spreadOffset = state.currentPrice * 0.0015;
           if (m.typeClass === "BOOM") {
-            // Boom indices favor Buy setups around structural dips
             if (state.type === "BUY") {
               state.tp = (state.currentPrice + (spreadOffset * 2.2)).toFixed(2);
               state.sl = (state.currentPrice - spreadOffset).toFixed(2);
@@ -543,7 +541,6 @@
               state.sl = (state.currentPrice + spreadOffset).toFixed(2);
             }
           } else if (m.typeClass === "CRASH") {
-            // Crash indices favor Sell setups near spikes
             if (state.type === "SELL") {
               state.tp = (state.currentPrice - (spreadOffset * 2.2)).toFixed(2);
               state.sl = (state.currentPrice + spreadOffset).toFixed(2);
@@ -552,7 +549,6 @@
               state.sl = (state.currentPrice - spreadOffset).toFixed(2);
             }
           } else {
-            // Standard Volatility & Step Indices
             if (state.type === "BUY") {
               state.tp = (state.currentPrice + (spreadOffset * 2)).toFixed(2);
               state.sl = (state.currentPrice - spreadOffset).toFixed(2);
@@ -567,7 +563,7 @@
     }
 
     buildUI();
-    startDeepScanEngine();
+    startAntiSpamEngine();
   </script>
 </body>
 </html>
