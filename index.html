@@ -40,7 +40,6 @@
       text-align: center;
     }
 
-    /* Threshold Slider Control Box */
     .control-panel {
       background: #111827;
       border: 1px solid #1f293d;
@@ -52,7 +51,6 @@
     .control-header span { color: #38ef7d; }
     input[type=range] { width: 100%; accent-color: #38ef7d; cursor: pointer; }
 
-    /* Filter Tabs */
     .filter-tabs { display: flex; gap: 6px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px; }
     .tab-btn {
       background: #111827;
@@ -136,7 +134,6 @@
     .type-BUY { color: #38ef7d; background: rgba(56, 239, 125, 0.1); padding: 2px 6px; border-radius: 4px; }
     .type-SELL { color: #f43f5e; background: rgba(244, 63, 94, 0.1); padding: 2px 6px; border-radius: 4px; }
 
-    /* History Log Section */
     .history-section { background: #111827; border: 1px solid #1f293d; border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; }
     .history-title { font-size: 0.75rem; font-weight: 700; color: #94a3b8; margin-bottom: 8px; display: flex; justify-content: space-between; }
     .history-list { max-height: 120px; overflow-y: auto; font-family: monospace; font-size: 0.65rem; display: flex; flex-direction: column; gap: 4px; }
@@ -160,7 +157,6 @@
     🔔 ENABLE BROWSER SIGNAL NOTIFICATIONS & AUDIO
   </button>
 
-  <!-- Threshold Slider Control -->
   <div class="control-panel">
     <div class="control-header">
       <span>TRIGGER SENSITIVITY LIMIT</span>
@@ -169,7 +165,6 @@
     <input type="range" id="threshold-slider" min="50" max="90" value="78" oninput="updateThreshold(this.value)">
   </div>
 
-  <!-- Category Filter Tabs -->
   <div class="filter-tabs">
     <button class="tab-btn active" onclick="setFilter('ALL', this)">All (63)</button>
     <button class="tab-btn" onclick="setFilter('BOOM_CRASH', this)">Boom & Crash</button>
@@ -186,7 +181,6 @@
     <div class="metric-card"><div class="metric-label">SETUPS FIRED</div><div class="metric-value" id="ready-count">0</div></div>
   </div>
 
-  <!-- Recent Signals History Drawer -->
   <div class="history-section">
     <div class="history-title">
       <span>RECENT SIGNAL LOG</span>
@@ -385,15 +379,25 @@
 
         if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
           const emoji = type === "BUY" ? "🟢" : "🔴";
-          const msg = `🚨 A.P.A. PRO ${type} SIGNAL ${emoji}\n\nMarket: ${name}\nMomentum: BREAKOUT (${percent}%)\n\nEntry: ${entry}\nTake Profit: ${tp}\nStop Loss: ${sl}\n\n⚡ Action: Check Chart Now`;
           
-          const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(msg)}`;
-          fetch(url).then(res => res.json()).catch(err => {});
+          // Telegram message formatting explicitly highlighting Entry, TP, and SL
+          const msg = `🚨 A.P.A. PRO ${type} SIGNAL ${emoji}\n\n` +
+                      `📊 Market: ${name}\n` +
+                      `⚡ Momentum: BREAKOUT (${percent}%)\n\n` +
+                      `🎯 *Entry Price:* \`${entry}\`\n` +
+                      `💰 *Take Profit (TP):* \`${tp}\`\n` +
+                      `🛡️ *Stop Loss (SL):* \`${sl}\`\n\n` +
+                      `📈 Action: Check Chart Now`;
+          
+          const telegramApiUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(msg)}&parse_mode=Markdown`;
+          
+          const img = new Image();
+          img.src = telegramApiUrl;
+          logActivity(`Telegram alert with Entry/TP/SL dispatched for ${name}`);
         }
       }
     }
 
-    // Build base DOM nodes once
     function buildUI() {
       const container = document.getElementById("radar-list");
       container.innerHTML = "";
@@ -438,7 +442,6 @@
       updateUIElements();
     }
 
-    // Lightweight DOM property updater called every tick/interval without touching node structure
     function updateUIElements() {
       let highestPct = -1;
       let closestAsset = MARKETS[0];
@@ -536,7 +539,6 @@
             const priceChange = price - basePrice;
             const diff = Math.abs(priceChange);
             
-            // Generate real percentage reacting directly to tick movement
             let pct = Math.min(Math.max(Math.round((diff / basePrice) * 18000 + (Math.random() * 8)), 45), 99);
             state.percent = pct;
 
@@ -565,11 +567,10 @@
       };
     }
 
-    // High-frequency live tick simulation loop to guarantee fluid real-time motion every second
     setInterval(() => {
       MARKETS.forEach(m => {
         let state = marketState[m.symbol];
-        let fluctuation = Math.floor(Math.random() * 5) - 2; // -2% to +2% shift
+        let fluctuation = Math.floor(Math.random() * 5) - 2;
         state.percent = Math.min(Math.max(state.percent + fluctuation, 45), 99);
       });
       updateUIElements();
