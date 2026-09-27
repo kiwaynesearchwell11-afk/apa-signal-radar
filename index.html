@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>A.P.A. PRO - Absolute Sanitized Feed</title>
+  <title>A.P.A. PRO - Secure Token Feed</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -135,7 +135,7 @@
 
   <div class="header">
     <h1>A.P.A. PRO</h1>
-    <div class="bot-badge"><div class="dot"></div> STRICT WHITELIST LOCK</div>
+    <div class="bot-badge"><div class="dot"></div> NEW SECURE TOKEN LOCK</div>
   </div>
 
   <button class="notify-btn" id="notify-btn" onclick="requestNotificationPermission()">
@@ -149,7 +149,7 @@
   </div>
 
   <div class="activity-ticker" id="activity-ticker">
-    <span>[SYSTEM]:</span> Whitelist security firewall engaged...
+    <span>[SYSTEM]:</span> New Telegram token successfully integrated...
   </div>
 
   <div class="metrics-grid">
@@ -159,7 +159,7 @@
 
   <div class="history-section">
     <div class="history-title">
-      <span>SANITIZED SIGNAL LOGS</span>
+      <span>SECURE SIGNAL LOGS</span>
       <span id="log-count" style="color: #38ef7d;">0 recorded</span>
     </div>
     <div class="history-list" id="history-log-container">
@@ -169,7 +169,7 @@
 
   <div class="section-header">
     <div>
-      <div class="section-title-sub">STRICT WHITELIST</div>
+      <div class="section-title-sub">SECURED API FEED</div>
       <div class="section-title">Active Focus</div>
     </div>
     <div class="live-tag" id="active-subs-count">SECURE FEED</div>
@@ -189,12 +189,12 @@
   </div>
 
   <script>
-    const TELEGRAM_BOT_TOKEN = "8212576128:AAH2HVXS6VX4EYbjlKintTTd4bzC2mwv6ng";
+    // Updated with your new secure Telegram Token
+    const TELEGRAM_BOT_TOKEN = "8212576128:AAEF9EGR9R3FMUjon8Ls4c9GltMw2MB4SvM";
     const TELEGRAM_CHAT_ID = "5913949259";
 
     let currentFilter = 'ALL';
 
-    // EXACT WHITELIST: Only these 12 symbols are allowed to exist or trigger alerts in memory
     const MARKETS = [
       { id: "01", symbol: "R_10", name: "Volatility 10 Index", group: "VOL", digits: 2 },
       { id: "02", symbol: "R_25", name: "Volatility 25 Index", group: "VOL", digits: 2 },
@@ -210,7 +210,6 @@
       { id: "12", symbol: "JD75", name: "Jump 75 Index", group: "ELITE", digits: 2 }
     ];
 
-    // HARD SECURITY WHITELIST ARRAY FOR NOTIFICATIONS
     const ALLOWED_SYMBOLS = MARKETS.map(m => m.symbol);
 
     const marketState = {};
@@ -283,11 +282,10 @@
       document.getElementById("log-count").innerText = `${signalLogs.length} recorded`;
     }
 
-    // STRICT FIREWALL: Drop any notification attempt if symbol is not explicitly in whitelist
     function triggerNotifications(name, symbol, type, entry, tp, sl, rsi) {
       if (!ALLOWED_SYMBOLS.includes(symbol)) {
         console.warn(`BLOCKED GHOST NOTIFICATION FOR UNAUTHORIZED SYMBOL: ${symbol}`);
-        return; // Hard block
+        return;
       }
 
       let state = marketState[symbol];
@@ -309,7 +307,7 @@
 
         if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
           const emoji = type === "BUY" ? "🟢" : "🔴";
-          const msg = `🚨 *A.P.A. STRICT WHITELIST SIGNAL* ${emoji}\n\n` +
+          const msg = `🚨 *A.P.A. NEW TOKEN SIGNAL* ${emoji}\n\n` +
                       `📊 Symbol: \`${symbol}\` (${name})\n` +
                       `🎯 *Action:* EXECUTE ${type} ON MT5\n` +
                       `📌 *Entry Price:* \`${entry}\`\n` +
@@ -433,7 +431,6 @@
         if (data.msg_type === "tick" && data.tick) {
           const symbol = data.tick.symbol;
           
-          // EXTRA SAFETY: Drop messages from any symbol not in our whitelist array
           if (!ALLOWED_SYMBOLS.includes(symbol)) return;
 
           const livePrice = data.tick.quote;
