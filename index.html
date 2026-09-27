@@ -150,7 +150,7 @@
 
   <div class="header">
     <h1>A.P.A. PRO</h1>
-    <div class="bot-badge"><div class="dot"></div> ANTI-SPAM RADAR</div>
+    <div class="bot-badge"><div class="dot"></div> STRICT ANTI-SPAM RADAR</div>
   </div>
 
   <button class="notify-btn" id="notify-btn" onclick="requestNotificationPermission()">
@@ -173,7 +173,7 @@
   </div>
 
   <div class="activity-ticker" id="activity-ticker">
-    <span>[SYSTEM]:</span> Anti-spam protection active (15-min cooldown per asset)...
+    <span>[SYSTEM]:</span> Strict state-lock protection active (1 alert per breakout cycle)...
   </div>
 
   <div class="metrics-grid">
@@ -286,7 +286,6 @@
     ];
 
     const marketState = {};
-    const lastAlertTimes = {}; // Anti-spam cooldown ledger
     const signalLogs = [];
 
     MARKETS.forEach(m => {
@@ -297,7 +296,8 @@
         type: "BUY",
         entry: m.base.toFixed(2),
         tp: (m.base * 1.003).toFixed(2),
-        sl: (m.base * 0.998).toFixed(2)
+        sl: (m.base * 0.998).toFixed(2),
+        hasAlerted: false // State lock: prevents spamming while staying high
       };
     });
 
@@ -362,11 +362,11 @@
     function triggerNotifications(name, symbol, percent, type, entry, tp, sl) {
       if (!entry || entry === "0.00" || !tp || tp === "0.00" || !sl || sl === "0.00") return;
 
-      const now = Date.now();
-      const cooldownTime = 15 * 60 * 1000; // 15-minute anti-spam cooldown per asset
+      let state = marketState[symbol];
 
-      if (!lastAlertTimes[symbol] || (now - lastAlertTimes[symbol] > cooldownTime)) {
-        lastAlertTimes[symbol] = now; // Lock timestamp
+      // STATE LOCK CHECK: Only fire if it hasn't alerted yet during this breakout cycle
+      if (!state.hasAlerted) {
+        state.hasAlerted = true; // Lock it so it won't fire again while remaining high
 
         playBeep();
         recordSignalLog(name, symbol, type, percent);
@@ -465,11 +465,12 @@
         if (data.percent >= TRIGGER_THRESHOLD) {
           data.status = "BREAKOUT";
           readyCount++;
+          // Fire alert only if state-lock allows it
           triggerNotifications(m.name, m.symbol, data.percent, data.type, data.entry, data.tp, data.sl);
-        } else if (data.percent >= (TRIGGER_THRESHOLD - 18)) {
-          data.status = "BLOCKED";
         } else {
-          data.status = "ANALYZING";
+          data.status = data.percent >= (TRIGGER_THRESHOLD - 18) ? "BLOCKED" : "ANALYZING";
+          // RESET STATE LOCK: Once the asset drops below the threshold, reset so it can notify again on the *next* breakout
+          data.hasAlerted = false;
         }
 
         if (data.percent > highestPct) {
@@ -518,7 +519,7 @@
     }
 
     function startAntiSpamEngine() {
-      logActivity("Anti-spam radar engine running (15 min per asset cooldown)...");
+      logActivity("Strict anti-spam radar engine running...");
       setInterval(() => {
         MARKETS.forEach(m => {
           let state = marketState[m.symbol];
