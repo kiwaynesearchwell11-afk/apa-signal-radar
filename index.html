@@ -164,9 +164,9 @@
   <div class="control-panel">
     <div class="control-header">
       <span>TRIGGER SENSITIVITY LIMIT</span>
-      <span id="threshold-val">65%</span>
+      <span id="threshold-val">78%</span>
     </div>
-    <input type="range" id="threshold-slider" min="50" max="90" value="65" oninput="updateThreshold(this.value)">
+    <input type="range" id="threshold-slider" min="50" max="90" value="78" oninput="updateThreshold(this.value)">
   </div>
 
   <!-- Category Filter Tabs -->
@@ -222,7 +222,7 @@
     const TELEGRAM_BOT_TOKEN = "8212576128:AAH2HVXS6VX4EYbjlKintTTd4bzC2mwv6ng";
     const TELEGRAM_CHAT_ID = "5913949259";
 
-    let TRIGGER_THRESHOLD = 65;
+    let TRIGGER_THRESHOLD = 78;
     let currentFilter = 'ALL';
 
     const MARKETS = [
@@ -298,7 +298,7 @@
 
     MARKETS.forEach(m => {
       marketState[m.symbol] = { 
-        percent: Math.floor(Math.random() * 40) + 30, // Dynamic starting variation instead of fixed 25
+        percent: Math.floor(Math.random() * 30) + 45, 
         status: "ANALYZING", 
         prices: [],
         type: "BUY",
@@ -328,14 +328,13 @@
       renderUI();
     }
 
-    // Audio Alarm Synthesizer (No external audio files needed)
     function playBeep() {
       try {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = "sine";
-        osc.frequency.value = 880; // High pitch alert note
+        osc.frequency.value = 880;
         gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
         osc.connect(gain);
         gain.connect(audioCtx.destination);
@@ -368,6 +367,8 @@
     }
 
     function triggerNotifications(name, symbol, percent, type, entry, tp, sl) {
+      if (!entry || entry === "0.00" || !tp || tp === "0.00" || !sl || sl === "0.00") return;
+
       if (!alertedMarkets[symbol]) {
         alertedMarkets[symbol] = true;
         setTimeout(() => { alertedMarkets[symbol] = false; }, 90000);
@@ -423,7 +424,6 @@
           closestAsset = m;
         }
 
-        // Apply filter tab check
         if (currentFilter !== 'ALL' && m.group !== currentFilter) {
           return;
         }
@@ -433,7 +433,6 @@
         const card = document.createElement("div");
         card.className = `radar-card ${isBreakout ? 'active-breakout' : ''}`;
         
-        // Direct Deriv WebTrader link for each asset
         const chartUrl = `https://trade.deriv.com/?market=${m.symbol}`;
 
         card.innerHTML = `
@@ -498,13 +497,11 @@
             state.prices.push(price);
             if (state.prices.length > 10) state.prices.shift();
 
-            // Calculate active movement percentage immediately using incoming ticks
             const basePrice = state.prices[0];
             const priceChange = price - basePrice;
             const diff = Math.abs(priceChange);
             
-            // Scaled dynamic percentage calculation to ensure active fluctuations
-            let pct = Math.min(Math.max(Math.round((diff / basePrice) * 15000 + (Math.random() * 15)), 20), 99);
+            let pct = Math.min(Math.max(Math.round((diff / basePrice) * 15000 + (Math.random() * 12)), 45), 99);
             state.percent = pct;
 
             const isSell = priceChange < 0;
@@ -532,9 +529,21 @@
       };
     }
 
+    // Real-time fluctuating ticker loop to ensure numbers are constantly moving smoothly
+    setInterval(() => {
+      MARKETS.forEach(m => {
+        let state = marketState[m.symbol];
+        // Only shift if they have entry values populated
+        if (state.entry !== "0.00") {
+          let fluctuation = Math.floor(Math.random() * 7) - 3; // -3 to +3
+          state.percent = Math.min(Math.max(state.percent + fluctuation, 45), 99);
+        }
+      });
+      renderUI();
+    }, 1500);
+
     initWebSocket();
 
-    // Prevent mobile screen sleep
     if ('wakeLock' in navigator) {
       let wakeLock = null;
       const requestWakeLock = async () => {
