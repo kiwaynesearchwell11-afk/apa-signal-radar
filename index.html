@@ -166,17 +166,17 @@
   </div>
 
   <div class="filter-tabs">
-    <button class="tab-btn active" onclick="setFilter('ALL', this)">Active Focus (51)</button>
+    <button class="tab-btn active" onclick="setFilter('ALL', this)">Active Focus (45)</button>
     <button class="tab-btn" onclick="setFilter('VOL', this)">Volatility Indices</button>
     <button class="tab-btn" onclick="setFilter('STEP_JUMP', this)">Step & Jump</button>
   </div>
 
   <div class="activity-ticker" id="activity-ticker">
-    <span>[SYSTEM]:</span> Filtering for Volatility, Step & Jump MT5 setups only...
+    <span>[SYSTEM]:</span> MT5 anti-spam filter enabled (60s cooldown per asset)...
   </div>
 
   <div class="metrics-grid">
-    <div class="metric-card"><div class="metric-label">MONITORED MARKETS</div><div class="metric-value" id="active-count">51</div></div>
+    <div class="metric-card"><div class="metric-label">MONITORED MARKETS</div><div class="metric-value" id="active-count">45</div></div>
     <div class="metric-card"><div class="metric-label">MT5 SETUPS FIRED</div><div class="metric-value" id="ready-count">0</div></div>
   </div>
 
@@ -218,53 +218,52 @@
     let TRIGGER_THRESHOLD = 88;
     let currentFilter = 'ALL';
 
-    // Only Volatility (VOL) and Step & Jump (STEP_JUMP) markets included
     const MARKETS = [
-      { id: "01", symbol: "R_10", name: "Volatility 10 Index", group: "VOL", base: 1980 },
-      { id: "02", symbol: "R_15", name: "Volatility 15 Index", group: "VOL", base: 2450 },
-      { id: "03", symbol: "R_25", name: "Volatility 25 Index", group: "VOL", base: 3100 },
-      { id: "04", symbol: "R_30", name: "Volatility 30 Index", group: "VOL", base: 4200 },
-      { id: "05", symbol: "R_50", name: "Volatility 50 Index", group: "VOL", base: 5600 },
-      { id: "06", symbol: "R_75", name: "Volatility 75 Index", group: "VOL", base: 9800 },
-      { id: "07", symbol: "R_90", name: "Volatility 90 Index", group: "VOL", base: 11200 },
-      { id: "08", symbol: "R_100", name: "Volatility 100 Index", group: "VOL", base: 14500 },
-      { id: "09", symbol: "R_150", name: "Volatility 150 Index", group: "VOL", base: 16200 },
-      { id: "10", symbol: "R_250", name: "Volatility 250 Index", group: "VOL", base: 19400 },
-      { id: "11", symbol: "1HZ10V", name: "Volatility 10 (1s)", group: "VOL", base: 1020 },
-      { id: "12", symbol: "1HZ25V", name: "Volatility 25 (1s)", group: "VOL", base: 1540 },
-      { id: "13", symbol: "1HZ50V", name: "Volatility 50 (1s)", group: "VOL", base: 2100 },
-      { id: "14", symbol: "1HZ75V", name: "Volatility 75 (1s)", group: "VOL", base: 3400 },
-      { id: "15", symbol: "1HZ100V", name: "Volatility 100 (1s)", group: "VOL", base: 4800 },
-      { id: "16", symbol: "1HZ150V", name: "Volatility 150 (1s)", group: "VOL", base: 6200 },
-      { id: "17", symbol: "1HZ250V", name: "Volatility 250 (1s)", group: "VOL", base: 8900 },
-      { id: "18", symbol: "JD10", name: "Jump 10 Index", group: "STEP_JUMP", base: 1420 },
-      { id: "19", symbol: "JD25", name: "Jump 25 Index", group: "STEP_JUMP", base: 2100 },
-      { id: "20", symbol: "JD50", name: "Jump 50 Index", group: "STEP_JUMP", base: 3500 },
-      { id: "21", symbol: "JD75", name: "Jump 75 Index", group: "STEP_JUMP", base: 6400 },
-      { id: "22", symbol: "JD100", name: "Jump 100 Index", group: "STEP_JUMP", base: 9200 },
-      { id: "23", symbol: "stpRNG", name: "Step Index", group: "STEP_JUMP", base: 1000 },
-      { id: "24", symbol: "stpRNG2", name: "Step 200 Index", group: "STEP_JUMP", base: 1500 },
-      { id: "25", symbol: "stpRNG3", name: "Step 300 Index", group: "STEP_JUMP", base: 2000 },
-      { id: "26", symbol: "stpRNG4", name: "Step 400 Index", group: "STEP_JUMP", base: 2500 },
-      { id: "27", symbol: "stpRNG5", name: "Step 500 Index", group: "STEP_JUMP", base: 3000 },
-      { id: "28", symbol: "SKEW1", name: "Skew Step 1", group: "STEP_JUMP", base: 1200 },
-      { id: "29", symbol: "SKEW2", name: "Skew Step 2", group: "STEP_JUMP", base: 1400 },
-      { id: "30", symbol: "SKEW3", name: "Skew Step 3", group: "STEP_JUMP", base: 1600 },
-      { id: "31", symbol: "DEX600UP", name: "DEX 600 UP", group: "VOL", base: 5100 },
-      { id: "32", symbol: "DEX600DN", name: "DEX 600 DN", group: "VOL", base: 5100 },
-      { id: "33", symbol: "DEX900UP", name: "DEX 900 UP", group: "VOL", base: 7200 },
-      { id: "34", symbol: "DEX900DN", name: "DEX 900 DN", group: "VOL", base: 7200 },
-      { id: "35", symbol: "DEX1500UP", name: "DEX 1500 UP", group: "VOL", base: 12000 },
-      { id: "36", symbol: "DEX1500DN", name: "DEX 1500 DN", group: "VOL", base: 12000 },
-      { id: "37", symbol: "DSI10", name: "DSI 10 Index", group: "VOL", base: 1100 },
-      { id: "38", symbol: "DSI20", name: "DSI 20 Index", group: "VOL", base: 2200 },
-      { id: "39", symbol: "DSI30", name: "DSI 30 Index", group: "VOL", base: 3300 },
-      { id: "40", symbol: "RB100", name: "Range Break 100", group: "VOL", base: 4500 },
-      { id: "41", symbol: "RB200", name: "Range Break 200", group: "VOL", base: 8500 },
-      { id: "42", symbol: "TREK1", name: "Trek Up Index", group: "STEP_JUMP", base: 1300 },
-      { id: "43", symbol: "TREK2", name: "Trek Down Index", group: "STEP_JUMP", base: 1300 },
-      { id: "44", symbol: "DBEAR", name: "Daily Reset Bear", group: "VOL", base: 2500 },
-      { id: "45", symbol: "DBULL", name: "Daily Reset Bull", group: "VOL", base: 2500 }
+      { id: "01", symbol: "R_10", name: "Volatility 10 Index", group: "VOL", base: 6350.45 },
+      { id: "02", symbol: "R_15", name: "Volatility 15 Index", group: "VOL", base: 12400.20 },
+      { id: "03", symbol: "R_25", name: "Volatility 25 Index", group: "VOL", base: 4520.10 },
+      { id: "04", symbol: "R_30", name: "Volatility 30 Index", group: "VOL", base: 3100.80 },
+      { id: "05", symbol: "R_50", name: "Volatility 50 Index", group: "VOL", base: 104500.50 },
+      { id: "06", symbol: "R_75", name: "Volatility 75 Index", group: "VOL", base: 485900.25 },
+      { id: "07", symbol: "R_90", name: "Volatility 90 Index", group: "VOL", base: 22400.00 },
+      { id: "08", symbol: "R_100", name: "Volatility 100 Index", group: "VOL", base: 3120.75 },
+      { id: "09", symbol: "R_150", name: "Volatility 150 Index", group: "VOL", base: 840.10 },
+      { id: "10", symbol: "R_250", name: "Volatility 250 Index", group: "VOL", base: 1650.30 },
+      { id: "11", symbol: "1HZ10V", name: "Volatility 10 (1s)", group: "VOL", base: 6420.15 },
+      { id: "12", symbol: "1HZ25V", name: "Volatility 25 (1s)", group: "VOL", base: 4610.80 },
+      { id: "13", symbol: "1HZ50V", name: "Volatility 50 (1s)", group: "VOL", base: 105200.00 },
+      { id: "14", symbol: "1HZ75V", name: "Volatility 75 (1s)", group: "VOL", base: 492000.10 },
+      { id: "15", symbol: "1HZ100V", name: "Volatility 100 (1s)", group: "VOL", base: 3180.50 },
+      { id: "16", symbol: "1HZ150V", name: "Volatility 150 (1s)", group: "VOL", base: 865.40 },
+      { id: "17", symbol: "1HZ250V", name: "Volatility 250 (1s)", group: "VOL", base: 1690.20 },
+      { id: "18", symbol: "JD10", name: "Jump 10 Index", group: "STEP_JUMP", base: 38200.50 },
+      { id: "19", symbol: "JD25", name: "Jump 25 Index", group: "STEP_JUMP", base: 41200.10 },
+      { id: "20", symbol: "JD50", name: "Jump 50 Index", group: "STEP_JUMP", base: 39500.00 },
+      { id: "21", symbol: "JD75", name: "Jump 75 Index", group: "STEP_JUMP", base: 44100.80 },
+      { id: "22", symbol: "JD100", name: "Jump 100 Index", group: "STEP_JUMP", base: 46200.25 },
+      { id: "23", symbol: "stpRNG", name: "Step Index", group: "STEP_JUMP", base: 6420.50 },
+      { id: "24", symbol: "stpRNG2", name: "Step 200 Index", group: "STEP_JUMP", base: 5120.10 },
+      { id: "25", symbol: "stpRNG3", name: "Step 300 Index", group: "STEP_JUMP", base: 4890.30 },
+      { id: "26", symbol: "stpRNG4", name: "Step 400 Index", group: "STEP_JUMP", base: 3950.40 },
+      { id: "27", symbol: "stpRNG5", name: "Step 500 Index", group: "STEP_JUMP", base: 2840.10 },
+      { id: "28", symbol: "SKEW1", name: "Skew Step 1", group: "STEP_JUMP", base: 1045.20 },
+      { id: "29", symbol: "SKEW2", name: "Skew Step 2", group: "STEP_JUMP", base: 1120.50 },
+      { id: "30", symbol: "SKEW3", name: "Skew Step 3", group: "STEP_JUMP", base: 1250.80 },
+      { id: "31", symbol: "DEX600UP", name: "DEX 600 UP", group: "VOL", base: 10250.00 },
+      { id: "32", symbol: "DEX600DN", name: "DEX 600 DN", group: "VOL", base: 10250.00 },
+      { id: "33", symbol: "DEX900UP", name: "DEX 900 UP", group: "VOL", base: 12400.00 },
+      { id: "34", symbol: "DEX900DN", name: "DEX 900 DN", group: "VOL", base: 12400.00 },
+      { id: "35", symbol: "DEX1500UP", name: "DEX 1500 UP", group: "VOL", base: 15100.00 },
+      { id: "36", symbol: "DEX1500DN", name: "DEX 1500 DN", group: "VOL", base: 15100.00 },
+      { id: "37", symbol: "DSI10", name: "DSI 10 Index", group: "VOL", base: 1050.50 },
+      { id: "38", symbol: "DSI20", name: "DSI 20 Index", group: "VOL", base: 2100.20 },
+      { id: "39", symbol: "DSI30", name: "DSI 30 Index", group: "VOL", base: 3150.80 },
+      { id: "40", symbol: "RB100", name: "Range Break 100", group: "VOL", base: 2450.00 },
+      { id: "41", symbol: "RB200", name: "Range Break 200", group: "VOL", base: 4900.00 },
+      { id: "42", symbol: "TREK1", name: "Trek Up Index", group: "STEP_JUMP", base: 1520.40 },
+      { id: "43", symbol: "TREK2", name: "Trek Down Index", group: "STEP_JUMP", base: 1520.40 },
+      { id: "44", symbol: "DBEAR", name: "Daily Reset Bear", group: "VOL", base: 5120.30 },
+      { id: "45", symbol: "DBULL", name: "Daily Reset Bull", group: "VOL", base: 5120.30 }
     ];
 
     const marketState = {};
@@ -277,9 +276,9 @@
         currentPrice: m.base,
         type: "BUY",
         entry: m.base.toFixed(2),
-        tp: (m.base * 1.003).toFixed(2),
+        tp: (m.base * 1.002).toFixed(2),
         sl: (m.base * 0.998).toFixed(2),
-        hasAlerted: false 
+        lastAlertTime: 0 
       };
     });
 
@@ -342,12 +341,12 @@
     }
 
     function triggerNotifications(name, symbol, percent, type, entry, tp, sl) {
-      if (!entry || entry === "0.00" || !tp || tp === "0.00" || !sl || sl === "0.00") return;
-
       let state = marketState[symbol];
+      let now = Date.now();
+      let cooldownMs = 60000; // 60 seconds anti-spam lockout per individual asset
 
-      if (!state.hasAlerted) {
-        state.hasAlerted = true; 
+      if (now - state.lastAlertTime > cooldownMs) {
+        state.lastAlertTime = now; 
 
         playBeep();
         recordSignalLog(name, symbol, type, percent);
@@ -378,13 +377,9 @@
             .then(data => {
               if (data.ok) {
                 logActivity(`✅ MT5 Telegram alert sent for ${name}`);
-              } else {
-                logActivity(`❌ Telegram Error: ${data.description}`);
               }
             })
-            .catch(err => {
-              logActivity(`❌ Network error dispatching Telegram alert`);
-            });
+            .catch(err => {});
         }
       }
     }
@@ -402,7 +397,6 @@
         card.className = `radar-card ${isBreakout ? 'active-breakout' : ''}`;
         card.id = `card-${m.symbol}`;
         
-        // Deep link instruction for MetaTrader 5 mobile/desktop apps
         const mt5Link = `metatrader5://trade?symbol=${m.symbol}`;
 
         card.innerHTML = `
@@ -449,7 +443,6 @@
           triggerNotifications(m.name, m.symbol, data.percent, data.type, data.entry, data.tp, data.sl);
         } else {
           data.status = data.percent >= (TRIGGER_THRESHOLD - 18) ? "BLOCKED" : "ANALYZING";
-          data.hasAlerted = false;
         }
 
         if (data.percent > highestPct) {
@@ -505,13 +498,13 @@
           let shift = Math.floor(Math.random() * 11) - 5; 
           state.percent = Math.min(Math.max(state.percent + shift, 52), 99);
 
-          let priceDelta = (Math.random() * 4 - 2) * (state.currentPrice * 0.0006);
+          let priceDelta = (Math.random() * 4 - 2) * (state.currentPrice * 0.0004);
           state.currentPrice += priceDelta;
           
           state.type = priceDelta >= 0 ? "BUY" : "SELL";
           state.entry = state.currentPrice.toFixed(2);
 
-          let spreadOffset = state.currentPrice * 0.0015;
+          let spreadOffset = state.currentPrice * 0.0012;
           if (state.type === "BUY") {
             state.tp = (state.currentPrice + (spreadOffset * 2)).toFixed(2);
             state.sl = (state.currentPrice - spreadOffset).toFixed(2);
@@ -521,7 +514,7 @@
           }
         });
         updateUIElements();
-      }, 1000);
+      }, 1500);
     }
 
     buildUI();
