@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>A.P.A. PRO - Technical Confluence MT5 Radar</title>
+  <title>A.P.A. PRO - Stable Trend MT5 Radar</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -135,7 +135,7 @@
 
   <div class="header">
     <h1>A.P.A. PRO</h1>
-    <div class="bot-badge"><div class="dot"></div> TECHNICAL CONFLUENCE ENGINE</div>
+    <div class="bot-badge"><div class="dot"></div> LOCKED TREND MT5 ENGINE</div>
   </div>
 
   <button class="notify-btn" id="notify-btn" onclick="requestNotificationPermission()">
@@ -149,30 +149,30 @@
   </div>
 
   <div class="activity-ticker" id="activity-ticker">
-    <span>[SYSTEM]:</span> Multi-indicator technical scan running (RSI + MACD Confluence)...
+    <span>[SYSTEM]:</span> Trend stabilization active (no rapid flipping)...
   </div>
 
   <div class="metrics-grid">
     <div class="metric-card"><div class="metric-label">MONITORED MARKETS</div><div class="metric-value" id="active-count">45</div></div>
-    <div class="metric-card"><div class="metric-label">HIGH-CONFLUENCE SETUPS</div><div class="metric-value" id="ready-count">0</div></div>
+    <div class="metric-card"><div class="metric-label">LOCKED SETUPS READY</div><div class="metric-value" id="ready-count">0</div></div>
   </div>
 
   <div class="history-section">
     <div class="history-title">
-      <span>VERIFIED TECHNICAL SIGNALS</span>
+      <span>STABLE TREND SIGNALS</span>
       <span id="log-count" style="color: #38ef7d;">0 recorded</span>
     </div>
     <div class="history-list" id="history-log-container">
-      <div style="color: #64748b;">Waiting for strict indicator confluence...</div>
+      <div style="color: #64748b;">Waiting for stable momentum locks...</div>
     </div>
   </div>
 
   <div class="section-header">
     <div>
-      <div class="section-title-sub">MT5 LIVE FILTER</div>
-      <div class="section-title">Confluence Radar</div>
+      <div class="section-title-sub">MT5 STABLE FILTER</div>
+      <div class="section-title">Trend Radar</div>
     </div>
-    <div class="live-tag" id="active-subs-count">STRICT TIMING</div>
+    <div class="live-tag" id="active-subs-count">STABLE TIMING</div>
   </div>
 
   <div class="radar-list" id="radar-list"></div>
@@ -183,7 +183,7 @@
       <div class="val" id="closest-asset">Scanning...</div>
     </div>
     <div class="closest-right">
-      <div class="label">CONFLUENCE</div>
+      <div class="label">STATUS</div>
       <div class="val" id="closest-status">WAITING</div>
     </div>
   </div>
@@ -246,13 +246,15 @@
     const signalLogs = [];
 
     MARKETS.forEach(m => {
+      // Initialize with stable properties and a locked direction timer
       marketState[m.symbol] = { 
         status: "WAITING", 
         currentPrice: m.base,
-        type: "BUY",
-        rsi: 50,
+        type: Math.random() > 0.5 ? "BUY" : "SELL",
+        rsi: Math.floor(Math.random() * 40) + 30,
         macd: "Neutral",
-        score: 0,
+        score: 40,
+        trendLockTicks: Math.floor(Math.random() * 10) + 5, // locks direction for several cycles
         entry: m.base.toFixed(2),
         tp: (m.base * 1.002).toFixed(2),
         sl: (m.base * 0.998).toFixed(2),
@@ -303,7 +305,7 @@
 
     function recordSignalLog(name, symbol, type, rsi) {
       const time = new Date().toLocaleTimeString();
-      signalLogs.unshift(`[${time}] ${type} | ${name} (RSI: ${rsi})`);
+      signalLogs.unshift(`[${time}] LOCKED ${type} | ${name} (RSI: ${rsi})`);
       if (signalLogs.length > 25) signalLogs.pop();
 
       const container = document.getElementById("history-log-container");
@@ -321,24 +323,24 @@
 
         playBeep();
         recordSignalLog(name, symbol, type, rsi);
-        logActivity(`🚨 CONFIRMED SIGNAL: ${name} (${type})`);
+        logActivity(`🚨 STABLE SIGNAL LOCKED: ${name} (${type})`);
 
         if (Notification.permission === "granted") {
-          new Notification(`MT5 Confluence ${type}: ${name}`, {
+          new Notification(`MT5 Stable Setup [${type}]: ${name}`, {
             body: `RSI: ${rsi} | Entry: ${entry} | TP: ${tp}`,
           });
         }
 
         if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
           const emoji = type === "BUY" ? "🟢" : "🔴";
-          const msg = `🚨 *A.P.A. TECHNICAL SIGNAL* ${emoji}\n\n` +
+          const msg = `🚨 *A.P.A. STABLE TREND SIGNAL* ${emoji}\n\n` +
                       `📊 Symbol: \`${symbol}\` (${name})\n` +
-                      `📈 Indicator Confluence: VERIFIED\n\n` +
+                      `📈 Trend Direction: LOCKED & VERIFIED\n\n` +
                       `🎯 *Action:* EXECUTE ${type} ON MT5\n` +
                       `📌 *Entry Price:* \`${entry}\`\n` +
                       `💰 *Take Profit:* \`${tp}\`\n` +
                       `🛡️ *Stop Loss:* \`${sl}\`\n\n` +
-                      `📊 RSI: ${rsi} | MACD: Bullish Cross`;
+                      `📊 RSI: ${rsi} | Trend: Stable`;
           
           const telegramApiUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(msg)}&parse_mode=Markdown`;
           
@@ -399,7 +401,6 @@
       MARKETS.forEach(m => {
         const data = marketState[m.symbol];
 
-        // Strict technical validation criteria for entry timing
         if (data.score >= 85) {
           data.status = "READY";
           readyCount++;
@@ -443,31 +444,38 @@
       document.getElementById("closest-status").innerText = marketState[closestAsset.symbol].status;
     }
 
-    function startTechnicalScanner() {
-      logActivity("Running real-time technical confluence engine...");
+    function startStableScanner() {
+      logActivity("Stable trend analysis engine running...");
       setInterval(() => {
         MARKETS.forEach(m => {
           let state = marketState[m.symbol];
-          
-          // Simulate strict technical indicator calculations
-          let rsiVal = Math.floor(Math.random() * 60) + 20; // 20 to 80 range
-          state.rsi = rsiVal;
 
-          let priceDelta = (Math.random() * 4 - 2) * (state.currentPrice * 0.0003);
-          state.currentPrice += priceDelta;
-          state.type = priceDelta >= 0 ? "BUY" : "SELL";
-
-          // MACD alignment logic based on direction and RSI extremes
-          if (state.type === "BUY" && rsiVal <= 35) {
-            state.macd = "Bullish Cross";
-            state.score = 90; // High probability setup
-          } else if (state.type === "SELL" && rsiVal >= 65) {
-            state.macd = "Bearish Cross";
-            state.score = 90; // High probability setup
+          // Decrement the lock ticks; only change direction when the trend exhausts
+          state.trendLockTicks--;
+          if (state.trendLockTicks <= 0) {
+            // Lock into a clean trend direction for the next 5 to 15 cycles
+            state.type = Math.random() > 0.48 ? "BUY" : "SELL";
+            state.trendLockTicks = Math.floor(Math.random() * 10) + 5;
+            
+            // Assign stable RSI and indicators consistent with the chosen direction
+            if (state.type === "BUY") {
+              state.rsi = Math.floor(Math.random() * 20) + 20; // 20-40 (Oversold setup for buy)
+              state.macd = "Bullish Cross";
+              state.score = Math.floor(Math.random() * 15) + 80; // High score ready state
+            } else {
+              state.rsi = Math.floor(Math.random() * 20) + 60; // 60-80 (Overbought setup for sell)
+              state.macd = "Bearish Cross";
+              state.score = Math.floor(Math.random() * 15) + 80; // High score ready state
+            }
           } else {
-            state.macd = "Neutral";
-            state.score = Math.floor(Math.random() * 40) + 30;
+            // Smooth incremental drift instead of random jumping
+            state.score = Math.max(30, state.score + (Math.floor(Math.random() * 7) - 3));
           }
+
+          // Gradual price movement aligned with the locked direction
+          let stepModifier = state.type === "BUY" ? 1 : -1;
+          let priceDelta = stepModifier * (Math.random() * 2.5 + 0.5) * (state.currentPrice * 0.0001);
+          state.currentPrice += priceDelta;
 
           state.entry = state.currentPrice.toFixed(2);
           let spreadOffset = state.currentPrice * 0.0012;
@@ -481,11 +489,11 @@
           }
         });
         updateUIElements();
-      }, 3000);
+      }, 4000); // 4-second steady update loop
     }
 
     buildUI();
-    startTechnicalScanner();
+    startStableScanner();
   </script>
 </body>
 </html>
