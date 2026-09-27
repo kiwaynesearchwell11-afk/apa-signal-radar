@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>A.P.A. LIVE - 63 Market Signal Radar</title>
+  <title>A.P.A. PRO - Ultimate 63 Market Radar</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -13,6 +13,7 @@
       padding: 16px;
       max-width: 480px;
       margin: 0 auto;
+      padding-bottom: 90px;
     }
     .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
     .header h1 { font-size: 1.25rem; letter-spacing: 1px; color: #ffffff; font-weight: 800; }
@@ -38,6 +39,33 @@
       cursor: pointer;
       text-align: center;
     }
+
+    /* Threshold Slider Control Box */
+    .control-panel {
+      background: #111827;
+      border: 1px solid #1f293d;
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+    }
+    .control-header { display: flex; justify-content: space-between; font-size: 0.7rem; font-weight: 700; color: #94a3b8; margin-bottom: 6px; }
+    .control-header span { color: #38ef7d; }
+    input[type=range] { width: 100%; accent-color: #38ef7d; cursor: pointer; }
+
+    /* Filter Tabs */
+    .filter-tabs { display: flex; gap: 6px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px; }
+    .tab-btn {
+      background: #111827;
+      color: #94a3b8;
+      border: 1px solid #1f293d;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .tab-btn.active { background: #1c4538; color: #38ef7d; border-color: #38ef7d; }
 
     .activity-ticker {
       background: #0f172a;
@@ -67,22 +95,39 @@
     .section-title-sub { font-size: 0.65rem; color: #f43f5e; font-weight: 700; text-transform: uppercase; }
     .section-title { font-size: 1.05rem; font-weight: 700; color: #ffffff; }
     
-    .live-tag { background: #1e293b; color: #94a3b8; font-size: 0.65rem; font-weight: 700; padding: 4px 8px; border-radius: 12px; border: 1px solid #334155; }
+    .live-tag { background: #1e293b; color: #38ef7d; font-size: 0.65rem; font-weight: 700; padding: 4px 8px; border-radius: 12px; border: 1px solid #1c4538; }
 
     .radar-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; max-height: 420px; overflow-y: auto; padding-right: 4px; }
-    .radar-card { background: #111827; border: 1px solid #1f293d; border-radius: 10px; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
+    .radar-card { background: #111827; border: 1px solid #1f293d; border-radius: 10px; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; transition: border-color 0.3s; }
+    .radar-card.active-breakout { border-color: #38ef7d; background: #132222; }
+    
     .card-top { display: flex; justify-content: space-between; align-items: flex-start; }
     .asset-info { display: flex; align-items: center; gap: 10px; }
     .asset-index { font-size: 0.75rem; color: #64748b; font-weight: 700; min-width: 22px; }
     .asset-name { font-size: 0.85rem; font-weight: 700; color: #ffffff; }
     .asset-status { font-size: 0.65rem; font-weight: 800; margin-top: 2px; }
-    .asset-percent { font-size: 0.9rem; font-weight: 800; color: #ffffff; }
+    .asset-percent { font-size: 0.95rem; font-weight: 800; color: #ffffff; }
 
-    .levels-box { display: flex; justify-content: space-between; background: #0f172a; padding: 6px 10px; border-radius: 6px; font-size: 0.7rem; color: #94a3b8; margin-top: 4px; }
+    .card-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+    .levels-box { display: flex; gap: 12px; background: #0f172a; padding: 6px 10px; border-radius: 6px; font-size: 0.7rem; color: #94a3b8; width: 100%; }
     .levels-box span { color: #e2e8f0; font-weight: 700; }
+    
+    .chart-link {
+      background: #1e293b;
+      color: #38ef7d;
+      border: 1px solid #334155;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-decoration: none;
+      white-space: nowrap;
+      margin-left: 8px;
+    }
 
     .progress-bar { background: #1e293b; height: 4px; border-radius: 2px; width: 100%; overflow: hidden; margin-top: 4px; }
-    .progress-fill { height: 100%; background: linear-gradient(90deg, #f97316, #e11d48); width: 0%; transition: width 0.4s ease; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, #f97316, #e11d48); width: 0%; transition: width 0.2s ease; }
+    .progress-fill.green { background: linear-gradient(90deg, #38ef7d, #11998e); }
 
     .status-BLOCKED { color: #f43f5e; }
     .status-BREAKOUT { color: #38ef7d; }
@@ -91,53 +136,85 @@
     .type-BUY { color: #38ef7d; background: rgba(56, 239, 125, 0.1); padding: 2px 6px; border-radius: 4px; }
     .type-SELL { color: #f43f5e; background: rgba(244, 63, 94, 0.1); padding: 2px 6px; border-radius: 4px; }
 
-    .closest-card { background: #111827; border: 1px solid #1f293d; border-radius: 10px; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; position: sticky; bottom: 0; }
-    .closest-left .label { font-size: 0.65rem; color: #f43f5e; font-weight: 700; }
+    /* History Log Section */
+    .history-section { background: #111827; border: 1px solid #1f293d; border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; }
+    .history-title { font-size: 0.75rem; font-weight: 700; color: #94a3b8; margin-bottom: 8px; display: flex; justify-content: space-between; }
+    .history-list { max-height: 120px; overflow-y: auto; font-family: monospace; font-size: 0.65rem; display: flex; flex-direction: column; gap: 4px; }
+    .history-item { color: #cbd5e1; border-bottom: 1px solid #1e293b; padding-bottom: 3px; }
+
+    .closest-card { background: #111827; border: 1px solid #1f293d; border-radius: 10px; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; position: fixed; bottom: 10px; left: 16px; right: 16px; max-width: 448px; margin: 0 auto; z-index: 100; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+    .closest-left .label { font-size: 0.65rem; color: #38ef7d; font-weight: 700; }
     .closest-left .val { font-size: 0.95rem; font-weight: 800; color: #ffffff; margin-top: 2px; }
     .closest-right .label { font-size: 0.65rem; color: #64748b; font-weight: 700; text-align: right; }
-    .closest-right .val { font-size: 0.95rem; font-weight: 800; color: #f43f5e; margin-top: 2px; }
+    .closest-right .val { font-size: 0.95rem; font-weight: 800; color: #38ef7d; margin-top: 2px; }
   </style>
 </head>
 <body>
 
   <div class="header">
-    <h1>A.P.A. LIVE</h1>
-    <div class="bot-badge"><div class="dot"></div> RADAR ACTIVE</div>
+    <h1>A.P.A. PRO</h1>
+    <div class="bot-badge"><div class="dot"></div> PRO TERMINAL</div>
   </div>
 
   <button class="notify-btn" id="notify-btn" onclick="requestNotificationPermission()">
-    🔔 ENABLE BROWSER SIGNAL NOTIFICATIONS
+    🔔 ENABLE BROWSER SIGNAL NOTIFICATIONS & AUDIO
   </button>
 
+  <!-- Threshold Slider Control -->
+  <div class="control-panel">
+    <div class="control-header">
+      <span>TRIGGER SENSITIVITY LIMIT</span>
+      <span id="threshold-val">65%</span>
+    </div>
+    <input type="range" id="threshold-slider" min="50" max="90" value="65" oninput="updateThreshold(this.value)">
+  </div>
+
+  <!-- Category Filter Tabs -->
+  <div class="filter-tabs">
+    <button class="tab-btn active" onclick="setFilter('ALL', this)">All (63)</button>
+    <button class="tab-btn" onclick="setFilter('BOOM_CRASH', this)">Boom & Crash</button>
+    <button class="tab-btn" onclick="setFilter('VOL', this)">Volatility</button>
+    <button class="tab-btn" onclick="setFilter('STEP_JUMP', this)">Step & Jump</button>
+  </div>
+
   <div class="activity-ticker" id="activity-ticker">
-    <span>[SYSTEM]:</span> Initializing stable polling pipeline...
+    <span>[SYSTEM]:</span> Initializing pro tracking modules...
   </div>
 
   <div class="metrics-grid">
-    <div class="metric-card"><div class="metric-label">MARKETS</div><div class="metric-value">63</div></div>
-    <div class="metric-card"><div class="metric-label">READY</div><div class="metric-value" id="ready-count">0</div></div>
-    <div class="metric-card"><div class="metric-label">OBSERVED W / L</div><div class="metric-value">4/5</div></div>
-    <div class="metric-card"><div class="metric-label">OBSERVED RATE</div><div class="metric-value">44.4%</div></div>
+    <div class="metric-card"><div class="metric-label">ACTIVE MARKETS</div><div class="metric-value" id="active-count">63</div></div>
+    <div class="metric-card"><div class="metric-label">SETUPS FIRED</div><div class="metric-value" id="ready-count">0</div></div>
+  </div>
+
+  <!-- Recent Signals History Drawer -->
+  <div class="history-section">
+    <div class="history-title">
+      <span>RECENT SIGNAL LOG</span>
+      <span id="log-count" style="color: #38ef7d;">0 recorded</span>
+    </div>
+    <div class="history-list" id="history-log-container">
+      <div style="color: #64748b;">No signals triggered yet this session.</div>
+    </div>
   </div>
 
   <div class="section-header">
     <div>
-      <div class="section-title-sub">MARKET RADAR / LIVE FEED</div>
-      <div class="section-title">Setups in motion</div>
+      <div class="section-title-sub">REAL-TIME RADAR (SORTED BY MOMENTUM)</div>
+      <div class="section-title">Active Setups</div>
     </div>
-    <div class="live-tag" id="refresh-timer">REFRESH: 30s</div>
+    <div class="live-tag" id="active-subs-count">0 SUBS</div>
   </div>
 
   <div class="radar-list" id="radar-list"></div>
 
   <div class="closest-card">
     <div class="closest-left">
-      <div class="label">CLOSEST TO READY</div>
-      <div class="val" id="closest-asset">Boom 150 Index</div>
+      <div class="label">TOP MOMENTUM ASSET</div>
+      <div class="val" id="closest-asset">Initializing...</div>
     </div>
     <div class="closest-right">
       <div class="label">STATUS</div>
-      <div class="val" id="closest-status">BLOCKED • 50%</div>
+      <div class="val" id="closest-status">ANALYZING</div>
     </div>
   </div>
 
@@ -145,84 +222,89 @@
     const TELEGRAM_BOT_TOKEN = "8212576128:AAH2HVXS6VX4EYbjlKintTTd4bzC2mwv6ng";
     const TELEGRAM_CHAT_ID = "5913949259";
 
+    let TRIGGER_THRESHOLD = 65;
+    let currentFilter = 'ALL';
+
     const MARKETS = [
-      { id: "01", symbol: "BOOM50", name: "Boom 50 Index" },
-      { id: "02", symbol: "BOOM150", name: "Boom 150 Index" },
-      { id: "03", symbol: "BOOM300", name: "Boom 300 Index" },
-      { id: "04", symbol: "BOOM500", name: "Boom 500 Index" },
-      { id: "05", symbol: "BOOM600", name: "Boom 600 Index" },
-      { id: "06", symbol: "BOOM1000", name: "Boom 1000 Index" },
-      { id: "07", symbol: "CRASH50", name: "Crash 50 Index" },
-      { id: "08", symbol: "CRASH150", name: "Crash 150 Index" },
-      { id: "09", symbol: "CRASH300", name: "Crash 300 Index" },
-      { id: "10", symbol: "CRASH500", name: "Crash 500 Index" },
-      { id: "11", symbol: "CRASH600", name: "Crash 600 Index" },
-      { id: "12", symbol: "CRASH1000", name: "Crash 1000 Index" },
-      { id: "13", symbol: "R_10", name: "Volatility 10 Index" },
-      { id: "14", symbol: "R_15", name: "Volatility 15 Index" },
-      { id: "15", symbol: "R_25", name: "Volatility 25 Index" },
-      { id: "16", symbol: "R_30", name: "Volatility 30 Index" },
-      { id: "17", symbol: "R_50", name: "Volatility 50 Index" },
-      { id: "18", symbol: "R_75", name: "Volatility 75 Index" },
-      { id: "19", symbol: "R_90", name: "Volatility 90 Index" },
-      { id: "20", symbol: "R_100", name: "Volatility 100 Index" },
-      { id: "21", symbol: "R_150", name: "Volatility 150 Index" },
-      { id: "22", symbol: "R_250", name: "Volatility 250 Index" },
-      { id: "23", symbol: "1HZ10V", name: "Volatility 10 (1s) Index" },
-      { id: "24", symbol: "1HZ25V", name: "Volatility 25 (1s) Index" },
-      { id: "25", symbol: "1HZ50V", name: "Volatility 50 (1s) Index" },
-      { id: "26", symbol: "1HZ75V", name: "Volatility 75 (1s) Index" },
-      { id: "27", symbol: "1HZ100V", name: "Volatility 100 (1s) Index" },
-      { id: "28", symbol: "1HZ150V", name: "Volatility 150 (1s) Index" },
-      { id: "29", symbol: "1HZ250V", name: "Volatility 250 (1s) Index" },
-      { id: "30", symbol: "JD10", name: "Jump 10 Index" },
-      { id: "31", symbol: "JD25", name: "Jump 25 Index" },
-      { id: "32", symbol: "JD50", name: "Jump 50 Index" },
-      { id: "33", symbol: "JD75", name: "Jump 75 Index" },
-      { id: "34", symbol: "JD100", name: "Jump 100 Index" },
-      { id: "35", symbol: "stpRNG", name: "Step Index" },
-      { id: "36", symbol: "stpRNG2", name: "Step 200 Index" },
-      { id: "37", symbol: "stpRNG3", name: "Step 300 Index" },
-      { id: "38", symbol: "stpRNG4", name: "Step 400 Index" },
-      { id: "39", symbol: "stpRNG5", name: "Step 500 Index" },
-      { id: "40", symbol: "SKEW1", name: "Skew Step 1 Index" },
-      { id: "41", symbol: "SKEW2", name: "Skew Step 2 Index" },
-      { id: "42", symbol: "SKEW3", name: "Skew Step 3 Index" },
-      { id: "43", symbol: "DEX600UP", name: "DEX 600 UP Index" },
-      { id: "44", symbol: "DEX600DN", name: "DEX 600 DN Index" },
-      { id: "45", symbol: "DEX900UP", name: "DEX 900 UP Index" },
-      { id: "46", symbol: "DEX900DN", name: "DEX 900 DN Index" },
-      { id: "47", symbol: "DEX1500UP", name: "DEX 1500 UP Index" },
-      { id: "48", symbol: "DEX1500DN", name: "DEX 1500 DN Index" },
-      { id: "49", symbol: "DSI10", name: "DSI 10 Index" },
-      { id: "50", symbol: "DSI20", name: "DSI 20 Index" },
-      { id: "51", symbol: "DSI30", name: "DSI 30 Index" },
-      { id: "52", symbol: "RB100", name: "Range Break 100 Index" },
-      { id: "53", symbol: "RB200", name: "Range Break 200 Index" },
-      { id: "54", symbol: "HB400", name: "Vol over Boom 400" },
-      { id: "55", symbol: "HB550", name: "Vol over Boom 550" },
-      { id: "56", symbol: "HB750", name: "Vol over Boom 750" },
-      { id: "57", symbol: "HC400", name: "Vol over Crash 400" },
-      { id: "58", symbol: "HC550", name: "Vol over Crash 550" },
-      { id: "59", symbol: "HC750", name: "Vol over Crash 750" },
-      { id: "60", symbol: "TREK1", name: "Trek Up Index" },
-      { id: "61", symbol: "TREK2", name: "Trek Down Index" },
-      { id: "62", symbol: "DBEAR", name: "Daily Reset Bear" },
-      { id: "63", symbol: "DBULL", name: "Daily Reset Bull" }
+      { id: "01", symbol: "BOOM50", name: "Boom 50 Index", group: "BOOM_CRASH" },
+      { id: "02", symbol: "BOOM150", name: "Boom 150 Index", group: "BOOM_CRASH" },
+      { id: "03", symbol: "BOOM300", name: "Boom 300 Index", group: "BOOM_CRASH" },
+      { id: "04", symbol: "BOOM500", name: "Boom 500 Index", group: "BOOM_CRASH" },
+      { id: "05", symbol: "BOOM600", name: "Boom 600 Index", group: "BOOM_CRASH" },
+      { id: "06", symbol: "BOOM1000", name: "Boom 1000 Index", group: "BOOM_CRASH" },
+      { id: "07", symbol: "CRASH50", name: "Crash 50 Index", group: "BOOM_CRASH" },
+      { id: "08", symbol: "CRASH150", name: "Crash 150 Index", group: "BOOM_CRASH" },
+      { id: "09", symbol: "CRASH300", name: "Crash 300 Index", group: "BOOM_CRASH" },
+      { id: "10", symbol: "CRASH500", name: "Crash 500 Index", group: "BOOM_CRASH" },
+      { id: "11", symbol: "CRASH600", name: "Crash 600 Index", group: "BOOM_CRASH" },
+      { id: "12", symbol: "CRASH1000", name: "Crash 1000 Index", group: "BOOM_CRASH" },
+      { id: "13", symbol: "R_10", name: "Volatility 10 Index", group: "VOL" },
+      { id: "14", symbol: "R_15", name: "Volatility 15 Index", group: "VOL" },
+      { id: "15", symbol: "R_25", name: "Volatility 25 Index", group: "VOL" },
+      { id: "16", symbol: "R_30", name: "Volatility 30 Index", group: "VOL" },
+      { id: "17", symbol: "R_50", name: "Volatility 50 Index", group: "VOL" },
+      { id: "18", symbol: "R_75", name: "Volatility 75 Index", group: "VOL" },
+      { id: "19", symbol: "R_90", name: "Volatility 90 Index", group: "VOL" },
+      { id: "20", symbol: "R_100", name: "Volatility 100 Index", group: "VOL" },
+      { id: "21", symbol: "R_150", name: "Volatility 150 Index", group: "VOL" },
+      { id: "22", symbol: "R_250", name: "Volatility 250 Index", group: "VOL" },
+      { id: "23", symbol: "1HZ10V", name: "Volatility 10 (1s)", group: "VOL" },
+      { id: "24", symbol: "1HZ25V", name: "Volatility 25 (1s)", group: "VOL" },
+      { id: "25", symbol: "1HZ50V", name: "Volatility 50 (1s)", group: "VOL" },
+      { id: "26", symbol: "1HZ75V", name: "Volatility 75 (1s)", group: "VOL" },
+      { id: "27", symbol: "1HZ100V", name: "Volatility 100 (1s)", group: "VOL" },
+      { id: "28", symbol: "1HZ150V", name: "Volatility 150 (1s)", group: "VOL" },
+      { id: "29", symbol: "1HZ250V", name: "Volatility 250 (1s)", group: "VOL" },
+      { id: "30", symbol: "JD10", name: "Jump 10 Index", group: "STEP_JUMP" },
+      { id: "31", symbol: "JD25", name: "Jump 25 Index", group: "STEP_JUMP" },
+      { id: "32", symbol: "JD50", name: "Jump 50 Index", group: "STEP_JUMP" },
+      { id: "33", symbol: "JD75", name: "Jump 75 Index", group: "STEP_JUMP" },
+      { id: "34", symbol: "JD100", name: "Jump 100 Index", group: "STEP_JUMP" },
+      { id: "35", symbol: "stpRNG", name: "Step Index", group: "STEP_JUMP" },
+      { id: "36", symbol: "stpRNG2", name: "Step 200 Index", group: "STEP_JUMP" },
+      { id: "37", symbol: "stpRNG3", name: "Step 300 Index", group: "STEP_JUMP" },
+      { id: "38", symbol: "stpRNG4", name: "Step 400 Index", group: "STEP_JUMP" },
+      { id: "39", symbol: "stpRNG5", name: "Step 500 Index", group: "STEP_JUMP" },
+      { id: "40", symbol: "SKEW1", name: "Skew Step 1", group: "STEP_JUMP" },
+      { id: "41", symbol: "SKEW2", name: "Skew Step 2", group: "STEP_JUMP" },
+      { id: "42", symbol: "SKEW3", name: "Skew Step 3", group: "STEP_JUMP" },
+      { id: "43", symbol: "DEX600UP", name: "DEX 600 UP", group: "VOL" },
+      { id: "44", symbol: "DEX600DN", name: "DEX 600 DN", group: "VOL" },
+      { id: "45", symbol: "DEX900UP", name: "DEX 900 UP", group: "VOL" },
+      { id: "46", symbol: "DEX900DN", name: "DEX 900 DN", group: "VOL" },
+      { id: "47", symbol: "DEX1500UP", name: "DEX 1500 UP", group: "VOL" },
+      { id: "48", symbol: "DEX1500DN", name: "DEX 1500 DN", group: "VOL" },
+      { id: "49", symbol: "DSI10", name: "DSI 10 Index", group: "VOL" },
+      { id: "50", symbol: "DSI20", name: "DSI 20 Index", group: "VOL" },
+      { id: "51", symbol: "DSI30", name: "DSI 30 Index", group: "VOL" },
+      { id: "52", symbol: "RB100", name: "Range Break 100", group: "VOL" },
+      { id: "53", symbol: "RB200", name: "Range Break 200", group: "VOL" },
+      { id: "54", symbol: "HB400", name: "Vol over Boom 400", group: "BOOM_CRASH" },
+      { id: "55", symbol: "HB550", name: "Vol over Boom 550", group: "BOOM_CRASH" },
+      { id: "56", symbol: "HB750", name: "Vol over Boom 750", group: "BOOM_CRASH" },
+      { id: "57", symbol: "HC400", name: "Vol over Crash 400", group: "BOOM_CRASH" },
+      { id: "58", symbol: "HC550", name: "Vol over Crash 550", group: "BOOM_CRASH" },
+      { id: "59", symbol: "HC750", name: "Vol over Crash 750", group: "BOOM_CRASH" },
+      { id: "60", symbol: "TREK1", name: "Trek Up Index", group: "STEP_JUMP" },
+      { id: "61", symbol: "TREK2", name: "Trek Down Index", group: "STEP_JUMP" },
+      { id: "62", symbol: "DBEAR", name: "Daily Reset Bear", group: "VOL" },
+      { id: "63", symbol: "DBULL", name: "Daily Reset Bull", group: "VOL" }
     ];
 
     const marketState = {};
     const alertedMarkets = {};
+    const signalLogs = [];
+    let activeSubscriptions = 0;
 
     MARKETS.forEach(m => {
       marketState[m.symbol] = { 
-        percent: Math.floor(Math.random() * 30) + 15, 
+        percent: 25, 
         status: "ANALYZING", 
         prices: [],
         type: "BUY",
-        entry: 0,
-        tp: 0,
-        sl: 0
+        entry: "0.00",
+        tp: "0.00",
+        sl: "0.00"
       };
     });
 
@@ -232,34 +314,80 @@
       ticker.innerHTML = `<span>[${time}]:</span> ${text}`;
     }
 
+    function updateThreshold(val) {
+      TRIGGER_THRESHOLD = parseInt(val);
+      document.getElementById("threshold-val").innerText = val + "%";
+      logActivity(`Trigger threshold adjusted to ${val}%`);
+      renderUI();
+    }
+
+    function setFilter(group, btn) {
+      currentFilter = group;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderUI();
+    }
+
+    // Audio Alarm Synthesizer (No external audio files needed)
+    function playBeep() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = 880; // High pitch alert note
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.2);
+      } catch (e) {}
+    }
+
     function requestNotificationPermission() {
       if ("Notification" in window) {
         Notification.requestPermission().then(permission => {
           if (permission === "granted") {
             const btn = document.getElementById("notify-btn");
-            btn.innerText = "🔔 BROWSER NOTIFICATIONS ACTIVE";
+            btn.innerText = "🔔 NOTIFICATIONS & AUDIO ACTIVE";
             btn.style.borderColor = "#38ef7d";
-            logActivity("Browser notifications permission granted.");
+            logActivity("Browser notifications and audio alarms enabled.");
           }
         });
       }
     }
 
+    function recordSignalLog(name, symbol, type, percent) {
+      const time = new Date().toLocaleTimeString();
+      signalLogs.unshift(`[${time}] ${type} | ${name} @ ${percent}%`);
+      if (signalLogs.length > 25) signalLogs.pop();
+
+      const container = document.getElementById("history-log-container");
+      container.innerHTML = signalLogs.map(log => `<div class="history-item">${log}</div>`).join('');
+      document.getElementById("log-count").innerText = `${signalLogs.length} recorded`;
+    }
+
     function triggerNotifications(name, symbol, percent, type, entry, tp, sl) {
       if (!alertedMarkets[symbol]) {
         alertedMarkets[symbol] = true;
-        logActivity(`🚨 BREAKOUT ALERTER FIRED FOR ${name} (${percent}%)`);
+        setTimeout(() => { alertedMarkets[symbol] = false; }, 90000);
+
+        playBeep();
+        recordSignalLog(name, symbol, type, percent);
+        logActivity(`🚨 LIVE ${type} SIGNAL: ${name} (${percent}%)`);
 
         if (Notification.permission === "granted") {
           new Notification(`A.P.A. ${type} ALERT: ${name}`, {
-            body: `Setup at ${percent}%! Entry: ${entry} | TP: ${tp} | SL: ${sl}`,
+            body: `Momentum: ${percent}%! Entry: ${entry} | TP: ${tp} | SL: ${sl}`,
           });
         }
 
         if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
           const emoji = type === "BUY" ? "🟢" : "🔴";
-          const msg = `🚨 A.P.A. ${type} SIGNAL ${emoji}\n\nMarket: ${name}\nStatus: BREAKOUT (${percent}%)\n\nEntry: ${entry}\nTake Profit: ${tp}\nStop Loss: ${sl}\n\nAction: Check Chart Now`;
-          fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(msg)}`).catch(()=>{});
+          const msg = `🚨 A.P.A. PRO ${type} SIGNAL ${emoji}\n\nMarket: ${name}\nMomentum: BREAKOUT (${percent}%)\n\nEntry: ${entry}\nTake Profit: ${tp}\nStop Loss: ${sl}\n\n⚡ Action: Check Chart Now`;
+          
+          const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(msg)}`;
+          fetch(url).then(res => res.json()).catch(err => {});
         }
       }
     }
@@ -271,19 +399,23 @@
       let highestPct = -1;
       let closestAsset = MARKETS[0];
       let readyCount = 0;
+      let visibleCount = 0;
 
-      MARKETS.forEach(m => {
+      const sortedMarkets = [...MARKETS].sort((a, b) => {
+        return marketState[b.symbol].percent - marketState[a.symbol].percent;
+      });
+
+      sortedMarkets.forEach(m => {
         const data = marketState[m.symbol];
 
-        if (data.percent >= 82) {
+        if (data.percent >= TRIGGER_THRESHOLD) {
           data.status = "BREAKOUT";
           readyCount++;
           triggerNotifications(m.name, m.symbol, data.percent, data.type, data.entry, data.tp, data.sl);
-        } else if (data.percent >= 50) {
+        } else if (data.percent >= (TRIGGER_THRESHOLD - 25)) {
           data.status = "BLOCKED";
         } else {
           data.status = "ANALYZING";
-          alertedMarkets[m.symbol] = false;
         }
 
         if (data.percent > highestPct) {
@@ -291,8 +423,19 @@
           closestAsset = m;
         }
 
+        // Apply filter tab check
+        if (currentFilter !== 'ALL' && m.group !== currentFilter) {
+          return;
+        }
+        visibleCount++;
+
+        const isBreakout = data.status === "BREAKOUT";
         const card = document.createElement("div");
-        card.className = "radar-card";
+        card.className = `radar-card ${isBreakout ? 'active-breakout' : ''}`;
+        
+        // Direct Deriv WebTrader link for each asset
+        const chartUrl = `https://trade.deriv.com/?market=${m.symbol}`;
+
         card.innerHTML = `
           <div class="card-top">
             <div class="asset-info">
@@ -307,111 +450,98 @@
             </div>
             <div class="asset-percent">${data.percent}%</div>
           </div>
-          <div class="levels-box">
-            <span>Entry: ${data.entry || '---'}</span>
-            <span>TP: ${data.tp || '---'}</span>
-            <span>SL: ${data.sl || '---'}</span>
+          <div class="card-actions">
+            <div class="levels-box">
+              <span>Entry: ${data.entry}</span>
+              <span>TP: ${data.tp}</span>
+              <span>SL: ${data.sl}</span>
+            </div>
+            <a href="${chartUrl}" target="_blank" class="chart-link">📈 Chart</a>
           </div>
-          <div class="progress-bar"><div class="progress-fill" style="width: ${data.percent}%"></div></div>
+          <div class="progress-bar"><div class="progress-fill ${isBreakout ? 'green' : ''}" style="width: ${data.percent}%"></div></div>
         `;
         container.appendChild(card);
       });
 
       document.getElementById("ready-count").innerText = readyCount;
-      document.getElementById("closest-asset").innerText = closestAsset.name;
-      document.getElementById("closest-status").innerText = `${marketState[closestAsset.symbol].status} • ${highestPct}%`;
+      document.getElementById("active-count").innerText = visibleCount;
+      document.getElementById("closest-asset").innerText = `${closestAsset.name} (${highestPct}%)`;
+      document.getElementById("closest-status").innerText = marketState[closestAsset.symbol].status;
     }
 
-    renderUI();
-
     let ws;
-    let marketIndex = 0;
-
     function initWebSocket() {
-      logActivity("Establishing stable connection to Deriv API...");
+      logActivity("Connecting to live Deriv tick streams...");
       ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=1089");
       
       ws.onopen = () => {
-        logActivity("Connected stable. Polling market feeds...");
-        pollNextMarket();
+        logActivity("Connected. Subscribing to all 63 live ticks...");
+        MARKETS.forEach((m, index) => {
+          setTimeout(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ ticks: m.symbol, subscribe: 1 }));
+              activeSubscriptions++;
+              document.getElementById("active-subs-count").innerText = `${activeSubscriptions} SUBS`;
+            }
+          }, index * 70);
+        });
       };
 
       ws.onmessage = (e) => {
         const msg = JSON.parse(e.data);
-        if (msg.msg_type === "history" && msg.history && msg.history.prices) {
-          const sym = msg.echo_req.ticks_history;
-          const prices = msg.history.prices.map(Number);
-          
-          if (marketState[sym] && prices.length > 2) {
-            marketState[sym].prices = prices;
-            const startPrice = prices[0];
-            const currentPrice = prices[prices.length - 1];
-            const priceChange = currentPrice - startPrice;
-            
-            const diff = Math.abs(priceChange);
-            let pct = Math.min(Math.round((diff / startPrice) * 20000), 99);
-            marketState[sym].percent = Math.max(pct, 15);
+        if (msg.msg_type === "tick" && msg.tick) {
+          const sym = msg.tick.symbol;
+          const price = parseFloat(msg.tick.quote);
 
-            const isSell = priceChange < 0;
-            marketState[sym].type = isSell ? "SELL" : "BUY";
+          if (marketState[sym]) {
+            let state = marketState[sym];
+            state.prices.push(price);
+            if (state.prices.length > 15) state.prices.shift();
 
-            const offset = currentPrice * 0.0015;
-            marketState[sym].entry = currentPrice.toFixed(2);
+            if (state.prices.length > 1) {
+              const basePrice = state.prices[0];
+              const priceChange = price - basePrice;
+              const diff = Math.abs(priceChange);
+              
+              let pct = Math.min(Math.round((diff / basePrice) * 12000), 99);
+              state.percent = Math.max(pct, 20);
 
-            if (isSell) {
-              marketState[sym].tp = (currentPrice - (offset * 2)).toFixed(2);
-              marketState[sym].sl = (currentPrice + offset).toFixed(2);
-            } else {
-              marketState[sym].tp = (currentPrice + (offset * 2)).toFixed(2);
-              marketState[sym].sl = (currentPrice - offset).toFixed(2);
+              const isSell = priceChange < 0;
+              state.type = isSell ? "SELL" : "BUY";
+              state.entry = price.toFixed(2);
+
+              const offset = price * 0.001;
+              if (isSell) {
+                state.tp = (price - (offset * 2)).toFixed(2);
+                state.sl = (price + offset).toFixed(2);
+              } else {
+                state.tp = (price + (offset * 2)).toFixed(2);
+                state.sl = (price - offset).toFixed(2);
+              }
+
+              renderUI();
             }
-            renderUI();
           }
         }
       };
 
       ws.onclose = () => {
-        logActivity("Socket resting. Reconnecting...");
+        logActivity("Connection resting. Reconnecting...");
+        activeSubscriptions = 0;
         setTimeout(initWebSocket, 2000);
       };
     }
 
-    function pollNextMarket() {
-      if (!ws || ws.readyState !== WebSocket.OPEN) return;
-      
-      const m = MARKETS[marketIndex];
-      ws.send(JSON.stringify({ ticks_history: m.symbol, count: 10, end: "latest", style: "ticks" }));
-      
-      marketIndex = (marketIndex + 1) % MARKETS.length;
-      setTimeout(pollNextMarket, 120); // Smooth polling interval that never crashes
-    }
-
     initWebSocket();
 
+    // Prevent mobile screen sleep
     if ('wakeLock' in navigator) {
       let wakeLock = null;
       const requestWakeLock = async () => {
-        try {
-          wakeLock = await navigator.wakeLock.request('screen');
-        } catch (err) {}
+        try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
       };
       requestWakeLock();
-      document.addEventListener('visibilitychange', async () => {
-        if (wakeLock !== null && document.visibilityState === 'visible') {
-          await requestWakeLock();
-        }
-      });
     }
-
-    let timeLeft = 30;
-    setInterval(() => {
-      timeLeft--;
-      if (timeLeft <= 0) {
-        timeLeft = 30;
-        logActivity("Completed full 63 market data scan cycle.");
-      }
-      document.getElementById("refresh-timer").innerText = `REFRESH: ${timeLeft}s`;
-    }, 1000);
   </script>
 </body>
 </html>
