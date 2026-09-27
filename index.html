@@ -298,7 +298,7 @@
 
     MARKETS.forEach(m => {
       marketState[m.symbol] = { 
-        percent: 25, 
+        percent: Math.floor(Math.random() * 40) + 30, // Dynamic starting variation instead of fixed 25
         status: "ANALYZING", 
         prices: [],
         type: "BUY",
@@ -496,31 +496,31 @@
           if (marketState[sym]) {
             let state = marketState[sym];
             state.prices.push(price);
-            if (state.prices.length > 15) state.prices.shift();
+            if (state.prices.length > 10) state.prices.shift();
 
-            if (state.prices.length > 1) {
-              const basePrice = state.prices[0];
-              const priceChange = price - basePrice;
-              const diff = Math.abs(priceChange);
-              
-              let pct = Math.min(Math.round((diff / basePrice) * 12000), 99);
-              state.percent = Math.max(pct, 20);
+            // Calculate active movement percentage immediately using incoming ticks
+            const basePrice = state.prices[0];
+            const priceChange = price - basePrice;
+            const diff = Math.abs(priceChange);
+            
+            // Scaled dynamic percentage calculation to ensure active fluctuations
+            let pct = Math.min(Math.max(Math.round((diff / basePrice) * 15000 + (Math.random() * 15)), 20), 99);
+            state.percent = pct;
 
-              const isSell = priceChange < 0;
-              state.type = isSell ? "SELL" : "BUY";
-              state.entry = price.toFixed(2);
+            const isSell = priceChange < 0;
+            state.type = isSell ? "SELL" : "BUY";
+            state.entry = price.toFixed(2);
 
-              const offset = price * 0.001;
-              if (isSell) {
-                state.tp = (price - (offset * 2)).toFixed(2);
-                state.sl = (price + offset).toFixed(2);
-              } else {
-                state.tp = (price + (offset * 2)).toFixed(2);
-                state.sl = (price - offset).toFixed(2);
-              }
-
-              renderUI();
+            const offset = price * 0.001;
+            if (isSell) {
+              state.tp = (price - (offset * 2)).toFixed(2);
+              state.sl = (price + offset).toFixed(2);
+            } else {
+              state.tp = (price + (offset * 2)).toFixed(2);
+              state.sl = (price - offset).toFixed(2);
             }
+
+            renderUI();
           }
         }
       };
