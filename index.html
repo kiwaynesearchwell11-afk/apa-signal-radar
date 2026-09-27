@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>A.P.A. PRO - M15 Strict Confluence Engine</title>
+  <title>A.P.A. M15 PRO - Full Market Confluence Engine</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -20,11 +20,25 @@
     
     .bot-badge { background: #13272d; color: #38ef7d; border: 1px solid #1c4538; font-size: 0.7rem; font-weight: 700; padding: 6px 12px; border-radius: 20px; display: flex; align-items: center; gap: 6px; }
     .dot { width: 6px; height: 6px; background-color: #38ef7d; border-radius: 50%; animation: pulse 2s infinite; }
-    .dot.offline { background-color: #f43f5e; }
+    .dot.offline { background-color: #f43f5e; box-shadow: none; }
     @keyframes pulse {
       0% { box-shadow: 0 0 0 0 rgba(56, 239, 125, 0.7); }
       70% { box-shadow: 0 0 0 6px rgba(56, 239, 125, 0); }
       100% { box-shadow: 0 0 0 0 rgba(56, 239, 125, 0); }
+    }
+
+    .notify-btn {
+      background: #111827;
+      color: #38ef7d;
+      border: 1px solid #1c4538;
+      padding: 10px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.8rem;
+      width: 100%;
+      margin-bottom: 12px;
+      cursor: pointer;
+      text-align: center;
     }
 
     .tf-box {
@@ -40,45 +54,243 @@
     .tf-box .title { font-size: 0.7rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; }
     .tf-box .timer { font-family: monospace; font-size: 1.1rem; font-weight: 800; color: #38ef7d; }
 
-    .radar-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
-    .radar-card { background: #111827; border: 1px solid #1f293d; border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+    .filter-tabs { display: flex; gap: 6px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px; }
+    .tab-btn {
+      background: #111827;
+      color: #94a3b8;
+      border: 1px solid #1f293d;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .tab-btn.active { background: #1c4538; color: #38ef7d; border-color: #38ef7d; }
+
+    .radar-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; max-height: 460px; overflow-y: auto; padding-right: 4px; }
+    .radar-card { background: #111827; border: 1px solid #1f293d; border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
     .radar-card.ready { border-color: #38ef7d; background: #112222; }
 
     .card-top { display: flex; justify-content: space-between; align-items: center; }
-    .asset-name { font-size: 0.9rem; font-weight: 700; color: #ffffff; }
-    .badge { font-size: 0.65srem; font-weight: 800; padding: 3px 8px; border-radius: 4px; }
+    .asset-name { font-size: 0.85rem; font-weight: 700; color: #ffffff; }
+    .badge { font-size: 0.65rem; font-weight: 800; padding: 3px 8px; border-radius: 4px; }
     .badge-buy { background: rgba(56, 239, 125, 0.15); color: #38ef7d; }
     .badge-sell { background: rgba(244, 63, 94, 0.15); color: #f43f5e; }
+    .badge-wait { background: rgba(100, 116, 139, 0.15); color: #94a3b8; }
 
-    .metrics-row { display: flex; justify-content: space-between; font-size: 0.7rem; color: #94a3b8; font-family: monospace; background: #0f172a; padding: 6px 10px; border-radius: 6px; }
-    .levels-row { display: flex; justify-content: space-between; font-size: 0.7rem; color: #e2e8f0; font-weight: 700; background: #0f172a; padding: 6px 10px; border-radius: 6px; }
+    .metrics-row { display: flex; justify-content: space-between; font-size: 0.68rem; color: #94a3b8; font-family: monospace; background: #0f172a; padding: 6px 10px; border-radius: 6px; }
+    .levels-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.68rem; color: #e2e8f0; font-weight: 700; background: #0f172a; padding: 6px 10px; border-radius: 6px; }
+    
+    .chart-link {
+      background: #1e293b;
+      color: #38ef7d;
+      border: 1px solid #334155;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.62rem;
+      font-weight: 700;
+      text-decoration: none;
+    }
   </style>
 </head>
 <body>
 
   <div class="header">
     <h1>A.P.A. M15 PRO</h1>
-    <div class="bot-badge"><div class="dot" id="ws-dot"></div> <span id="ws-status">M15 SYNCED</span></div>
+    <div class="bot-badge"><div class="dot" id="ws-dot"></div> <span id="ws-status">CONNECTING...</span></div>
   </div>
+
+  <button class="notify-btn" id="notify-btn" onclick="requestNotificationPermission()">
+    🔔 ENABLE AUDIO & NOTIFICATIONS
+  </button>
 
   <div class="tf-box">
     <div>
       <div class="title">Current M15 Candle Countdown</div>
-      <div style="font-size: 0.65rem; color: #64748b;">Triggers strict validation on close</div>
+      <div style="font-size: 0.62rem; color: #64748b;">Live Deriv WebSocket synchronization</div>
     </div>
     <div class="timer" id="m15-timer">15:00</div>
+  </div>
+
+  <div class="filter-tabs">
+    <button class="tab-btn active" onclick="setFilter('ALL', this)">All Volatility & Elite (14)</button>
+    <button class="tab-btn" onclick="setFilter('STD', this)">Standard Vol</button>
+    <button class="tab-btn" onclick="setFilter('1S', this)">1-Second Vol</button>
+    <button class="tab-btn" onclick="setFilter('ELITE', this)">Step & Jump</button>
   </div>
 
   <div class="radar-list" id="m15-radar"></div>
 
   <script>
+    const TELEGRAM_BOT_TOKEN = "8212576128:AAEF9EGR9R3FMUjon8Ls4c9GltMw2MB4SvM";
+    const TELEGRAM_CHAT_ID = "5913949259";
+
+    let currentFilter = 'ALL';
+    let timeLeft = 900; 
+
+    // Complete list of standard volatility, 1s volatility, step, and jump indices available on Deriv WS API
     const MARKETS = [
-      { symbol: "R_75", name: "Volatility 75 Index", digits: 2, atr: 10.0 },
-      { symbol: "stpRNG", name: "Step Index", digits: 2, atr: 5.0 },
-      { symbol: "1HZ100V", name: "Volatility 100 (1s)", digits: 2, atr: 12.5 }
+      { symbol: "R_10", name: "Volatility 10 Index", group: "STD", digits: 2, atr: 1.5 },
+      { symbol: "R_25", name: "Volatility 25 Index", group: "STD", digits: 2, atr: 3.0 },
+      { symbol: "R_50", name: "Volatility 50 Index", group: "STD", digits: 2, atr: 6.0 },
+      { symbol: "R_75", name: "Volatility 75 Index", group: "STD", digits: 2, atr: 10.0 },
+      { symbol: "R_100", name: "Volatility 100 Index", group: "STD", digits: 2, atr: 14.0 },
+      { symbol: "1HZ10V", name: "Volatility 10 (1s)", group: "1S", digits: 2, atr: 1.2 },
+      { symbol: "1HZ25V", name: "Volatility 25 (1s)", group: "1S", digits: 2, atr: 2.5 },
+      { symbol: "1HZ50V", name: "Volatility 50 (1s)", group: "1S", digits: 2, atr: 5.5 },
+      { symbol: "1HZ75V", name: "Volatility 75 (1s)", group: "1S", digits: 2, atr: 9.0 },
+      { symbol: "1HZ100V", name: "Volatility 100 (1s)", group: "1S", digits: 2, atr: 12.5 },
+      { symbol: "stpRNG", name: "Step Index", group: "ELITE", digits: 2, atr: 5.0 },
+      { symbol: "JD10", name: "Jump 10 Index", group: "ELITE", digits: 2, atr: 15.0 },
+      { symbol: "JD50", name: "Jump 50 Index", group: "ELITE", digits: 2, atr: 30.0 },
+      { symbol: "JD75", name: "Jump 75 Index", group: "ELITE", digits: 2, atr: 45.0 }
     ];
 
-    let timeLeft = 900; // 15 minutes in seconds
+    const marketState = {};
+
+    MARKETS.forEach(m => {
+      marketState[m.symbol] = {
+        price: 0,
+        rsi: 50,
+        macd: "Neutral",
+        type: "WAIT",
+        status: "WAITING",
+        entry: "0.00",
+        tp: "0.00",
+        sl: "0.00",
+        candles: [],
+        lastAlert: 0
+      };
+    });
+
+    function setFilter(group, btn) {
+      currentFilter = group;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderRadar();
+    }
+
+    function playBeep() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.frequency.value = 880;
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.2);
+      } catch(e) {}
+    }
+
+    function requestNotificationPermission() {
+      if ("Notification" in window) {
+        Notification.requestPermission().then(permission => {
+          if (permission === "granted") {
+            document.getElementById("notify-btn").innerText = "🔔 LIVE NOTIFICATIONS ACTIVE";
+          }
+        });
+      }
+    }
+
+    function calculateRSI(closes, period = 14) {
+      if (closes.length < period + 1) return 50;
+      let gains = 0, losses = 0;
+      for (let i = 1; i <= period; i++) {
+        const change = closes[closes.length - i] - closes[closes.length - i - 1];
+        if (change >= 0) gains += change;
+        else losses -= change;
+      }
+      let avgGain = gains / period;
+      let avgLoss = losses / period;
+      if (avgLoss === 0) return 100;
+      let rs = avgGain / avgLoss;
+      return Math.round(100 - (100 / (1 + rs)));
+    }
+
+    function calculateEMA(data, period) {
+      if (data.length === 0) return 0;
+      let k = 2 / (period + 1);
+      let ema = data[0];
+      for (let i = 1; i < data.length; i++) {
+        ema = (data[i] * k) + (ema * (1 - k));
+      }
+      return ema;
+    }
+
+    function analyzeMarket(m) {
+      let state = marketState[m.symbol];
+      if (state.candles.length < 15) return;
+
+      let rsi = calculateRSI(state.candles, 14);
+      state.rsi = rsi;
+
+      let ema12 = calculateEMA(state.candles, 12);
+      let ema26 = calculateEMA(state.candles, 26);
+      state.macd = ema12 >= ema26 ? "Bullish Cross" : "Bearish Cross";
+
+      let p = parseFloat(state.price);
+      state.entry = p.toFixed(m.digits);
+
+      if (rsi <= 38 && ema12 >= ema26) {
+        state.type = "BUY";
+        state.status = "READY";
+        state.tp = (p + (m.atr * 2.5)).toFixed(m.digits);
+        state.sl = (p - (m.atr * 1.5)).toFixed(m.digits);
+      } else if (rsi >= 62 && ema12 < ema26) {
+        state.type = "SELL";
+        state.status = "READY";
+        state.tp = (p - (m.atr * 2.5)).toFixed(m.digits);
+        state.sl = (p + (m.atr * 1.5)).toFixed(m.digits);
+      } else {
+        state.type = "WAIT";
+        state.status = "WAITING";
+        state.tp = "—";
+        state.sl = "—";
+      }
+
+      // Trigger Telegram & audio alert on confirmed M15 setup
+      if (state.status === "READY" && (Date.now() - state.lastAlert > 60000)) {
+        state.lastAlert = Date.now();
+        playBeep();
+        if (Notification.permission === "granted") {
+          new Notification(`M15 Setup [${state.type}]: ${m.name}`, { body: `Price: ${state.entry} | RSI: ${rsi}` });
+        }
+        if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
+          const msg = `🚨 *A.P.A. M15 SIGNAL* (${m.name})\nType: *${state.type}*\nEntry: \`${state.entry}\`\nTP: \`${state.tp}\` | SL: \`${state.sl}\`\nRSI: ${rsi} | MACD: ${state.macd}`;
+          fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(msg)}&parse_mode=Markdown`).catch(()=>{});
+        }
+      }
+    }
+
+    function renderRadar() {
+      const container = document.getElementById("m15-radar");
+      container.innerHTML = MARKETS.filter(m => currentFilter === 'ALL' || m.group === currentFilter).map(m => {
+        let state = marketState[m.symbol];
+        let isReady = state.status === "READY";
+        let badgeClass = state.type === "BUY" ? "badge-buy" : (state.type === "SELL" ? "badge-sell" : "badge-wait");
+        
+        return `
+          <div class="radar-card ${isReady ? 'ready' : ''}">
+            <div class="card-top">
+              <span class="asset-name">${m.name}</span>
+              <span class="badge ${badgeClass}">M15 ${state.type}</span>
+            </div>
+            <div class="metrics-row">
+              <span>RSI(14): ${state.rsi}</span>
+              <span>MACD: ${state.macd}</span>
+            </div>
+            <div class="levels-row">
+              <span>Entry: ${state.entry}</span>
+              <span>TP: ${state.tp}</span>
+              <span>SL: ${state.sl}</span>
+              <a href="metatrader5://trade?symbol=${m.symbol}" class="chart-link">MT5</a>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
 
     function updateTimer() {
       let m = Math.floor(timeLeft / 60);
@@ -87,37 +299,71 @@
       if (timeLeft > 0) {
         timeLeft--;
       } else {
-        timeLeft = 900; // Reset for next M15 candle block
-        triggerM15Evaluation();
+        timeLeft = 900; 
       }
     }
 
-    function triggerM15Evaluation() {
-      console.log("New M15 candle started. Re-evaluating structural bias...");
-    }
+    function connectDerivWebSocket() {
+      const ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=1089");
 
-    function renderRadar() {
-      const container = document.getElementById("m15-radar");
-      container.innerHTML = MARKETS.map(m => `
-        <div class="radar-card ready">
-          <div class="card-top">
-            <span class="asset-name">${m.name}</span>
-            <span class="badge badge-buy">M15 BUY SETUP</span>
-          </div>
-          <div class="metrics-row">
-            <span>RSI(14): 34.2 (Oversold)</span>
-            <span>MACD: Bullish Cross</span>
-          </div>
-          <div class="levels-row">
-            <span>Entry: Market</span>
-            <span>TP: +25.00</span>
-            <span>SL: -15.00</span>
-          </div>
-        </div>
-      `).join('');
+      ws.onopen = () => {
+        document.getElementById("ws-dot").className = "dot";
+        document.getElementById("ws-status").innerText = "M15 WS SYNCED";
+        
+        MARKETS.forEach(m => {
+          ws.send(JSON.stringify({
+            ticks_history: m.symbol,
+            adjust_start_time: 1,
+            count: 35,
+            end: "latest",
+            granularity: 900,
+            style: "candles"
+          }));
+          ws.send(JSON.stringify({ ticks: m.symbol, subscribe: 1 }));
+        });
+      };
+
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.msg_type === "candles" && data.candles) {
+          const symbol = data.echo_req.ticks_history;
+          if (marketState[symbol]) {
+            marketState[symbol].candles = data.candles.map(c => c.close);
+            marketState[symbol].price = data.candles[data.candles.length - 1].close;
+            const mObj = MARKETS.find(x => x.symbol === symbol);
+            if (mObj) analyzeMarket(mObj);
+            renderRadar();
+          }
+        }
+        if (data.msg_type === "tick" && data.tick) {
+          const symbol = data.tick.symbol;
+          const price = data.tick.quote;
+          if (marketState[symbol]) {
+            marketState[symbol].price = price;
+            if (marketState[symbol].candles.length > 0) {
+              marketState[symbol].candles[marketState[symbol].candles.length - 1] = price;
+            }
+            const mObj = MARKETS.find(x => x.symbol === symbol);
+            if (mObj) analyzeMarket(mObj);
+            renderRadar();
+          }
+        }
+      };
+
+      ws.onerror = () => {
+        document.getElementById("ws-dot").className = "dot offline";
+        document.getElementById("ws-status").innerText = "WS ERROR";
+      };
+
+      ws.onclose = () => {
+        document.getElementById("ws-dot").className = "dot offline";
+        document.getElementById("ws-status").innerText = "RECONNECTING...";
+        setTimeout(connectDerivWebSocket, 3000);
+      };
     }
 
     renderRadar();
+    connectDerivWebSocket();
     setInterval(updateTimer, 1000);
   </script>
 </body>
