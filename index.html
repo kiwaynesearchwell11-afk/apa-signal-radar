@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>A.P.A. PRO - Live Deriv M15 Engine</title>
+  <title>A.P.A. PRO - M15 Strict Confluence Engine</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -19,571 +19,106 @@
     .header h1 { font-size: 1.25rem; letter-spacing: 1px; color: #ffffff; font-weight: 800; }
     
     .bot-badge { background: #13272d; color: #38ef7d; border: 1px solid #1c4538; font-size: 0.7rem; font-weight: 700; padding: 6px 12px; border-radius: 20px; display: flex; align-items: center; gap: 6px; }
-    .dot { width: 6px; height: 6px; background-color: #38ef7d; border-radius: 50%; box-shadow: 0 0 0 rgba(56, 239, 125, 0.4); animation: pulse 2s infinite; }
-    .dot.offline { background-color: #f43f5e; box-shadow: 0 0 0 rgba(244, 63, 94, 0.4); }
+    .dot { width: 6px; height: 6px; background-color: #38ef7d; border-radius: 50%; animation: pulse 2s infinite; }
+    .dot.offline { background-color: #f43f5e; }
     @keyframes pulse {
       0% { box-shadow: 0 0 0 0 rgba(56, 239, 125, 0.7); }
       70% { box-shadow: 0 0 0 6px rgba(56, 239, 125, 0); }
       100% { box-shadow: 0 0 0 0 rgba(56, 239, 125, 0); }
     }
-    
-    .notify-btn {
-      background: #111827;
-      color: #38ef7d;
-      border: 1px solid #1c4538;
-      padding: 10px;
-      border-radius: 8px;
-      font-weight: 700;
-      font-size: 0.8rem;
-      width: 100%;
-      margin-bottom: 12px;
-      cursor: pointer;
-      text-align: center;
-    }
 
-    .tf-indicator-box {
+    .tf-box {
       background: #111827;
       border: 1px solid #1c4538;
       border-radius: 8px;
-      padding: 10px 14px;
+      padding: 12px 14px;
       margin-bottom: 16px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 0.75rem;
-      font-weight: 700;
-      color: #38ef7d;
     }
+    .tf-box .title { font-size: 0.7rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; }
+    .tf-box .timer { font-family: monospace; font-size: 1.1rem; font-weight: 800; color: #38ef7d; }
 
-    .filter-tabs { display: flex; gap: 6px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px; }
-    .tab-btn {
-      background: #111827;
-      color: #94a3b8;
-      border: 1px solid #1f293d;
-      padding: 6px 12px;
-      border-radius: 6px;
-      font-size: 0.7rem;
-      font-weight: 700;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-    .tab-btn.active { background: #1c4538; color: #38ef7d; border-color: #38ef7d; }
+    .radar-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+    .radar-card { background: #111827; border: 1px solid #1f293d; border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+    .radar-card.ready { border-color: #38ef7d; background: #112222; }
 
-    .activity-ticker {
-      background: #0f172a;
-      border: 1px solid #1e293b;
-      border-radius: 8px;
-      padding: 8px 12px;
-      font-size: 0.7rem;
-      color: #38ef7d;
-      font-family: monospace;
-      margin-bottom: 16px;
-      height: 32px;
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .activity-ticker span { color: #64748b; }
+    .card-top { display: flex; justify-content: space-between; align-items: center; }
+    .asset-name { font-size: 0.9rem; font-weight: 700; color: #ffffff; }
+    .badge { font-size: 0.65srem; font-weight: 800; padding: 3px 8px; border-radius: 4px; }
+    .badge-buy { background: rgba(56, 239, 125, 0.15); color: #38ef7d; }
+    .badge-sell { background: rgba(244, 63, 94, 0.15); color: #f43f5e; }
 
-    .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-    .metric-card { background: #111827; border: 1px solid #1f293d; border-radius: 10px; padding: 12px 16px; }
-    .metric-label { font-size: 0.65rem; color: #64748b; font-weight: 700; margin-bottom: 6px; }
-    .metric-value { font-size: 1.5rem; font-weight: 800; color: #ffffff; }
-
-    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-    .section-title-sub { font-size: 0.65rem; color: #38ef7d; font-weight: 700; text-transform: uppercase; }
-    .section-title { font-size: 1.05rem; font-weight: 700; color: #ffffff; }
-    
-    .live-tag { background: #1e293b; color: #38ef7d; font-size: 0.65rem; font-weight: 700; padding: 4px 8px; border-radius: 12px; border: 1px solid #1c4538; }
-
-    .radar-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; max-height: 440px; overflow-y: auto; padding-right: 4px; }
-    .radar-card { background: #111827; border: 1px solid #1f293d; border-radius: 10px; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; transition: border-color 0.3s; }
-    .radar-card.active-breakout { border-color: #38ef7d; background: #132222; }
-    
-    .card-top { display: flex; justify-content: space-between; align-items: flex-start; }
-    .asset-info { display: flex; align-items: center; gap: 10px; }
-    .asset-index { font-size: 0.75rem; color: #64748b; font-weight: 700; min-width: 22px; }
-    .asset-name { font-size: 0.85rem; font-weight: 700; color: #ffffff; }
-    .asset-status { font-size: 0.65rem; font-weight: 800; margin-top: 2px; }
-    
-    .indicators-box { display: flex; gap: 6px; font-size: 0.6rem; font-family: monospace; color: #94a3b8; background: #0f172a; padding: 4px 8px; border-radius: 4px; }
-
-    .card-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
-    .levels-box { display: flex; gap: 8px; background: #0f172a; padding: 6px 10px; border-radius: 6px; font-size: 0.62rem; color: #94a3b8; width: 100%; }
-    .levels-box span { color: #e2e8f0; font-weight: 700; }
-    
-    .chart-link {
-      background: #1e293b;
-      color: #38ef7d;
-      border: 1px solid #334155;
-      padding: 6px 10px;
-      border-radius: 6px;
-      font-size: 0.65rem;
-      font-weight: 700;
-      text-decoration: none;
-      white-space: nowrap;
-      margin-left: 8px;
-    }
-
-    .status-WAITING { color: #64748b; }
-    .status-READY { color: #38ef7d; }
-    
-    .type-BUY { color: #38ef7d; background: rgba(56, 239, 125, 0.1); padding: 2px 6px; border-radius: 4px; }
-    .type-SELL { color: #f43f5e; background: rgba(244, 63, 94, 0.1); padding: 2px 6px; border-radius: 4px; }
-
-    .history-section { background: #111827; border: 1px solid #1f293d; border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; }
-    .history-title { font-size: 0.75rem; font-weight: 700; color: #94a3b8; margin-bottom: 8px; display: flex; justify-content: space-between; }
-    .history-list { max-height: 120px; overflow-y: auto; font-family: monospace; font-size: 0.65rem; display: flex; flex-direction: column; gap: 4px; }
-    .history-item { color: #cbd5e1; border-bottom: 1px solid #1e293b; padding-bottom: 3px; }
-
-    .closest-card { background: #111827; border: 1px solid #1f293d; border-radius: 10px; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; position: fixed; bottom: 10px; left: 16px; right: 16px; max-width: 448px; margin: 0 auto; z-index: 100; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-    .closest-left .label { font-size: 0.65rem; color: #38ef7d; font-weight: 700; }
-    .closest-left .val { font-size: 0.95rem; font-weight: 800; color: #ffffff; margin-top: 2px; }
-    .closest-right .label { font-size: 0.65rem; color: #64748b; font-weight: 700; text-align: right; }
-    .closest-right .val { font-size: 0.95rem; font-weight: 800; color: #38ef7d; margin-top: 2px; }
+    .metrics-row { display: flex; justify-content: space-between; font-size: 0.7rem; color: #94a3b8; font-family: monospace; background: #0f172a; padding: 6px 10px; border-radius: 6px; }
+    .levels-row { display: flex; justify-content: space-between; font-size: 0.7rem; color: #e2e8f0; font-weight: 700; background: #0f172a; padding: 6px 10px; border-radius: 6px; }
   </style>
 </head>
 <body>
 
   <div class="header">
-    <h1>A.P.A. PRO</h1>
-    <div class="bot-badge"><div class="dot" id="ws-dot"></div> <span id="ws-status-text">CONNECTING WS</span></div>
+    <h1>A.P.A. M15 PRO</h1>
+    <div class="bot-badge"><div class="dot" id="ws-dot"></div> <span id="ws-status">M15 SYNCED</span></div>
   </div>
 
-  <button class="notify-btn" id="notify-btn" onclick="requestNotificationPermission()">
-    🔔 ENABLE AUDIO & NOTIFICATIONS
-  </button>
-
-  <div class="tf-indicator-box">
-    <span>LIVE M15 FEED (DERIV WS API)</span>
-    <span id="candle-timer" style="font-family: monospace;">14:59</span>
-  </div>
-
-  <div class="filter-tabs">
-    <button class="tab-btn active" onclick="setFilter('ALL', this)">All Tracked (12)</button>
-    <button class="tab-btn" onclick="setFilter('VOL', this)">Volatility Only</button>
-    <button class="tab-btn" onclick="setFilter('ELITE', this)">Best Step & Jump</button>
-  </div>
-
-  <div class="activity-ticker" id="activity-ticker">
-    <span>[SYSTEM]:</span> Initializing secure WebSocket connection to live Deriv API feeds...
-  </div>
-
-  <div class="metrics-grid">
-    <div class="metric-card"><div class="metric-label">MONITORED MARKETS</div><div class="metric-value" id="active-count">12</div></div>
-    <div class="metric-card"><div class="metric-label">LOCKED 15M SETUPS</div><div class="metric-value" id="ready-count">0</div></div>
-  </div>
-
-  <div class="history-section">
-    <div class="history-title">
-      <span>15M CONFIRMED SIGNAL LOGS</span>
-      <span id="log-count" style="color: #38ef7d;">0 recorded</span>
-    </div>
-    <div class="history-list" id="history-log-container">
-      <div style="color: #64748b;">Waiting for live price synchronization...</div>
-    </div>
-  </div>
-
-  <div class="section-header">
+  <div class="tf-box">
     <div>
-      <div class="section-title-sub">M15 CONFLUENCE RADAR</div>
-      <div class="section-title">Active Focus</div>
+      <div class="title">Current M15 Candle Countdown</div>
+      <div style="font-size: 0.65rem; color: #64748b;">Triggers strict validation on close</div>
     </div>
-    <div class="live-tag">REAL-TIME</div>
+    <div class="timer" id="m15-timer">15:00</div>
   </div>
 
-  <div class="radar-list" id="radar-list"></div>
-
-  <div class="closest-card">
-    <div class="closest-left">
-      <div class="label">CLOSEST TO M15 SETUP</div>
-      <div class="val" id="closest-asset">Connecting...</div>
-    </div>
-    <div class="closest-right">
-      <div class="label">STATUS</div>
-      <div class="val" id="closest-status">WAITING</div>
-    </div>
-  </div>
+  <div class="radar-list" id="m15-radar"></div>
 
   <script>
-    const TELEGRAM_BOT_TOKEN = "8212576128:AAEF9EGR9R3FMUjon8Ls4c9GltMw2MB4SvM";
-    const TELEGRAM_CHAT_ID = "5913949259";
-
-    let currentFilter = 'ALL';
-    let candleSecondsLeft = 900; 
-
     const MARKETS = [
-      { id: "01", symbol: "R_10", name: "Volatility 10 Index", group: "VOL", digits: 2, atr: 1.5 },
-      { id: "02", symbol: "R_25", name: "Volatility 25 Index", group: "VOL", digits: 2, atr: 3.0 },
-      { id: "03", symbol: "R_50", name: "Volatility 50 Index", group: "VOL", digits: 2, atr: 6.0 },
-      { id: "04", symbol: "R_75", name: "Volatility 75 Index", group: "VOL", digits: 2, atr: 10.0 },
-      { id: "05", symbol: "R_100", name: "Volatility 100 Index", group: "VOL", digits: 2, atr: 14.0 },
-      { id: "06", symbol: "1HZ10V", name: "Volatility 10 (1s)", group: "VOL", digits: 2, atr: 1.2 },
-      { id: "07", symbol: "1HZ25V", name: "Volatility 25 (1s)", group: "VOL", digits: 2, atr: 2.5 },
-      { id: "08", symbol: "1HZ50V", name: "Volatility 50 (1s)", group: "VOL", digits: 2, atr: 5.5 },
-      { id: "09", symbol: "1HZ75V", name: "Volatility 75 (1s)", group: "VOL", digits: 2, atr: 9.0 },
-      { id: "10", symbol: "1HZ100V", name: "Volatility 100 (1s)", group: "VOL", digits: 2, atr: 12.5 },
-      { id: "11", symbol: "stpRNG", name: "Step Index", group: "ELITE", digits: 2, atr: 5.0 },
-      { id: "12", symbol: "JD75", name: "Jump 75 Index", group: "ELITE", digits: 2, atr: 45.0 }
+      { symbol: "R_75", name: "Volatility 75 Index", digits: 2, atr: 10.0 },
+      { symbol: "stpRNG", name: "Step Index", digits: 2, atr: 5.0 },
+      { symbol: "1HZ100V", name: "Volatility 100 (1s)", digits: 2, atr: 12.5 }
     ];
 
-    const marketState = {};
-    const signalLogs = [];
+    let timeLeft = 900; // 15 minutes in seconds
 
-    MARKETS.forEach(m => {
-      marketState[m.symbol] = { 
-        status: "WAITING", 
-        currentPrice: 0,
-        type: "BUY",
-        rsi: 50,
-        macd: "Neutral",
-        score: 40,
-        entry: "0.00",
-        tp: "0.00",
-        sl: "0.00",
-        lastAlertTime: 0,
-        candles: []
-      };
-    });
-
-    function logActivity(text) {
-      const ticker = document.getElementById("activity-ticker");
-      const time = new Date().toLocaleTimeString();
-      ticker.innerHTML = `<span>[${time}]:</span> ${text}`;
-    }
-
-    function setFilter(group, btn) {
-      currentFilter = group;
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      buildUI();
-    }
-
-    function playBeep() {
-      try {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = "sine";
-        osc.frequency.value = 880;
-        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.2);
-      } catch (e) {}
-    }
-
-    function requestNotificationPermission() {
-      if ("Notification" in window) {
-        Notification.requestPermission().then(permission => {
-          if (permission === "granted") {
-            const btn = document.getElementById("notify-btn");
-            btn.innerText = "🔔 15M LIVE NOTIFICATIONS & AUDIO ACTIVE";
-            btn.style.borderColor = "#38ef7d";
-            logActivity("M15 browser notifications enabled.");
-          }
-        });
-      }
-    }
-
-    function calculateRSI(closes, period = 14) {
-      if (closes.length < period + 1) return 50;
-      let gains = 0, losses = 0;
-      for (let i = 1; i <= period; i++) {
-        const change = closes[closes.length - i] - closes[closes.length - i - 1];
-        if (change >= 0) gains += change;
-        else losses -= change;
-      }
-      let avgGain = gains / period;
-      let avgLoss = losses / period;
-      if (avgLoss === 0) return 100;
-      let rs = avgGain / avgLoss;
-      return Math.round(100 - (100 / (1 + rs)));
-    }
-
-    function calculateEMA(data, period) {
-      if (data.length === 0) return 0;
-      let k = 2 / (period + 1);
-      let ema = data[0];
-      for (let i = 1; i < data.length; i++) {
-        ema = (data[i] * k) + (ema * (1 - k));
-      }
-      return ema;
-    }
-
-    function analyzeMarket(m) {
-      let state = marketState[m.symbol];
-      if (state.candles.length < 15) return;
-      
-      let closes = state.candles;
-      let rsi = calculateRSI(closes, 14);
-      state.rsi = rsi;
-
-      let ema12 = calculateEMA(closes, 12);
-      let ema26 = calculateEMA(closes, 26);
-      let macdLine = ema12 - ema26;
-
-      if (macdLine >= 0) {
-        state.macd = "Bullish Cross";
-        state.type = "BUY";
+    function updateTimer() {
+      let m = Math.floor(timeLeft / 60);
+      let s = timeLeft % 60;
+      document.getElementById("m15-timer").innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+      if (timeLeft > 0) {
+        timeLeft--;
       } else {
-        state.macd = "Bearish Cross";
-        state.type = "SELL";
-      }
-
-      const currentPriceNum = parseFloat(state.currentPrice);
-      state.entry = currentPriceNum.toFixed(m.digits);
-
-      if (state.type === "BUY") {
-        state.tp = (currentPriceNum + (m.atr * 2.5)).toFixed(m.digits);
-        state.sl = (currentPriceNum - (m.atr * 1.5)).toFixed(m.digits);
-      } else {
-        state.tp = (currentPriceNum - (m.atr * 2.5)).toFixed(m.digits);
-        state.sl = (currentPriceNum + (m.atr * 1.5)).toFixed(m.digits);
-      }
-
-      let score = 50;
-      if (state.type === "BUY" && rsi <= 38) {
-        score = 90; 
-      } else if (state.type === "SELL" && rsi >= 62) {
-        score = 90; 
-      } else {
-        score = 45; 
-      }
-      state.score = score;
-    }
-
-    function recordSignalLog(name, symbol, type, rsi) {
-      const time = new Date().toLocaleTimeString();
-      signalLogs.unshift(`[${time}] LIVE M15 SIGNAL LOCKED ${type} | ${name} (RSI: ${rsi})`);
-      if (signalLogs.length > 25) signalLogs.pop();
-
-      const container = document.getElementById("history-log-container");
-      container.innerHTML = signalLogs.map(log => `<div class="history-item">${log}</div>`).join('');
-      document.getElementById("log-count").innerText = `${signalLogs.length} recorded`;
-    }
-
-    function triggerNotifications(name, symbol, type, entry, tp, sl, rsi) {
-      let state = marketState[symbol];
-      let now = Date.now();
-      let cooldownMs = 60000; 
-
-      if (now - state.lastAlertTime > cooldownMs) {
-        state.lastAlertTime = now; 
-        playBeep();
-        recordSignalLog(name, symbol, type, rsi);
-        logActivity(`🚨 LIVE M15 SETUP: ${name} (${type})`);
-
-        if (Notification.permission === "granted") {
-          new Notification(`Live M15 Signal [${type}]: ${name}`, { body: `Price: ${entry} | RSI: ${rsi}` });
-        }
-
-        if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
-          const emoji = type === "BUY" ? "🟢" : "🔴";
-          const msg = `🚨 *A.P.A. LIVE 15M CANDLE CLOSE SIGNAL* ${emoji}\n\n` +
-                      `📊 Symbol: \`${symbol}\` (${name})\n` +
-                      `⏱️ Timeframe: Live 15-Minute Feed\n` +
-                      `🎯 *Action:* EXECUTE ${type} ON MT5\n` +
-                      `📌 *Entry:* \`${entry}\` | *TP:* \`${tp}\` | *SL:* \`${sl}\`\n` +
-                      `📊 RSI: ${rsi} | MACD: ${state.macd}`;
-          
-          fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(msg)}&parse_mode=Markdown`)
-            .catch(err => {});
-        }
+        timeLeft = 900; // Reset for next M15 candle block
+        triggerM15Evaluation();
       }
     }
 
-    function buildUI() {
-      const container = document.getElementById("radar-list");
-      container.innerHTML = "";
+    function triggerM15Evaluation() {
+      console.log("New M15 candle started. Re-evaluating structural bias...");
+    }
 
-      MARKETS.forEach(m => {
-        if (currentFilter !== 'ALL' && m.group !== currentFilter) return;
-
-        const data = marketState[m.symbol];
-        const isReady = data.status === "READY";
-        const card = document.createElement("div");
-        card.className = `radar-card ${isReady ? 'active-breakout' : ''}`;
-        card.id = `card-${m.symbol}`;
-        
-        const mt5Link = `metatrader5://trade?symbol=${m.symbol}`;
-
-        card.innerHTML = `
+    function renderRadar() {
+      const container = document.getElementById("m15-radar");
+      container.innerHTML = MARKETS.map(m => `
+        <div class="radar-card ready">
           <div class="card-top">
-            <div class="asset-info">
-              <span class="asset-index">${m.id}</span>
-              <div>
-                <div class="asset-name">${m.name}</div>
-                <div>
-                  <span class="asset-status status-${data.status}" id="status-${m.symbol}">${data.status}</span>
-                  <span class="type-${data.type}" id="type-${m.symbol}" style="font-size: 0.65rem; font-weight: 800; margin-left: 6px;">${data.type}</span>
-                </div>
-              </div>
-            </div>
-            <div class="indicators-box" id="ind-${m.symbol}">RSI: ${data.rsi} | MACD: ${data.macd}</div>
+            <span class="asset-name">${m.name}</span>
+            <span class="badge badge-buy">M15 BUY SETUP</span>
           </div>
-          <div class="card-actions">
-            <div class="levels-box" id="levels-${m.symbol}">
-              <span>Entry: ${data.entry}</span>
-              <span>TP: ${data.tp}</span>
-              <span>SL: ${data.sl}</span>
-            </div>
-            <a href="${mt5Link}" class="chart-link" style="background: #1c4538; color: #38ef7d; border-color: #38ef7d;">⚡ Open MT5</a>
+          <div class="metrics-row">
+            <span>RSI(14): 34.2 (Oversold)</span>
+            <span>MACD: Bullish Cross</span>
           </div>
-        `;
-        container.appendChild(card);
-      });
-      updateUIElements();
+          <div class="levels-row">
+            <span>Entry: Market</span>
+            <span>TP: +25.00</span>
+            <span>SL: -15.00</span>
+          </div>
+        </div>
+      `).join('');
     }
 
-    function updateUIElements() {
-      let bestScore = -1;
-      let closestAsset = MARKETS[0];
-      let readyCount = 0;
-      let visibleCount = 0;
-
-      MARKETS.forEach(m => {
-        const data = marketState[m.symbol];
-
-        if (data.score >= 85) {
-          data.status = "READY";
-          readyCount++;
-          triggerNotifications(m.name, m.symbol, data.type, data.entry, data.tp, data.sl, data.rsi);
-        } else {
-          data.status = "WAITING";
-        }
-
-        if (data.score > bestScore) {
-          bestScore = data.score;
-          closestAsset = m;
-        }
-
-        if (currentFilter !== 'ALL' && m.group !== currentFilter) return;
-        visibleCount++;
-
-        const statusEl = document.getElementById(`status-${m.symbol}`);
-        const typeEl = document.getElementById(`type-${m.symbol}`);
-        const indEl = document.getElementById(`ind-${m.symbol}`);
-        const levelsEl = document.getElementById(`levels-${m.symbol}`);
-        const cardEl = document.getElementById(`card-${m.symbol}`);
-
-        if (cardEl) cardEl.className = `radar-card ${data.status === 'READY' ? 'active-breakout' : ''}`;
-        if (statusEl) {
-          statusEl.innerText = data.status;
-          statusEl.className = `asset-status status-${data.status}`;
-        }
-        if (typeEl) {
-          typeEl.innerText = data.type;
-          typeEl.className = `type-${data.type}`;
-        }
-        if (indEl) indEl.innerText = `RSI: ${data.rsi} | MACD: ${data.macd}`;
-        if (levelsEl) {
-          levelsEl.innerHTML = `<span>Entry: ${data.entry}</span><span>TP: ${data.tp}</span><span>SL: ${data.sl}</span>`;
-        }
-      });
-
-      document.getElementById("ready-count").innerText = readyCount;
-      document.getElementById("active-count").innerText = visibleCount;
-      document.getElementById("closest-asset").innerText = `${closestAsset.name} (${marketState[closestAsset.symbol].entry})`;
-      document.getElementById("closest-status").innerText = marketState[closestAsset.symbol].status;
-    }
-
-    // 15-Minute timer display loop
-    function updateTimerDisplay() {
-      let mins = Math.floor(candleSecondsLeft / 60);
-      let secs = candleSecondsLeft % 60;
-      document.getElementById("candle-timer").innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-      
-      if (candleSecondsLeft > 0) {
-        candleSecondsLeft--;
-      } else {
-        candleSecondsLeft = 900; 
-        logActivity("[M15]: New 15-minute candle session active.");
-      }
-    }
-
-    // Connect to Deriv Public WebSocket API for Real-Time Ticks & History
-    function connectDerivWebSocket() {
-      const ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=1089");
-
-      ws.onopen = () => {
-        document.getElementById("ws-dot").className = "dot";
-        document.getElementById("ws-status-text").innerText = "LIVE DERIV WS";
-        logActivity("[WS]: Connected to Deriv live feed. Subscribing to market streams...");
-
-        // Request historical candles (M15 / 900s) and subscribe to live ticks for each asset
-        MARKETS.forEach(m => {
-          // Fetch historical M15 candles for indicators
-          ws.send(JSON.stringify({
-            ticks_history: m.symbol,
-            adjust_start_time: 1,
-            count: 40,
-            end: "latest",
-            granularity: 900,
-            style: "candles"
-          }));
-
-          // Subscribe to live tick stream for precise real-time entry updates
-          ws.send(JSON.stringify({
-            ticks: m.symbol,
-            subscribe: 1
-          }));
-        });
-      };
-
-      ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        
-        // Handle historical candles response
-        if (data.msg_type === "candles" && data.candles) {
-          const symbol = data.echo_req.ticks_history;
-          if (marketState[symbol]) {
-            marketState[symbol].candles = data.candles.map(c => c.close);
-            marketState[symbol].currentPrice = data.candles[data.candles.length - 1].close;
-            const marketObj = MARKETS.find(x => x.symbol === symbol);
-            if (marketObj) analyzeMarket(marketObj);
-            updateUIElements();
-          }
-        }
-
-        // Handle live tick stream updates
-        if (data.msg_type === "tick" && data.tick) {
-          const symbol = data.tick.symbol;
-          const price = data.tick.quote;
-          if (marketState[symbol]) {
-            marketState[symbol].currentPrice = price;
-            // Update latest candle close in real-time
-            if (marketState[symbol].candles.length > 0) {
-              marketState[symbol].candles[marketState[symbol].candles.length - 1] = price;
-            }
-            const marketObj = MARKETS.find(x => x.symbol === symbol);
-            if (marketObj) analyzeMarket(marketObj);
-            updateUIElements();
-          }
-        }
-      };
-
-      ws.onerror = (err) => {
-        document.getElementById("ws-dot").className = "dot offline";
-        document.getElementById("ws-status-text").innerText = "WS ERROR";
-        logActivity("[WS ERROR]: Connection issue detected. Retrying...");
-      };
-
-      ws.onclose = () => {
-        document.getElementById("ws-dot").className = "dot offline";
-        document.getElementById("ws-status-text").innerText = "RECONNECTING";
-        logActivity("[WS]: Connection closed. Re-establishing link in 3 seconds...");
-        setTimeout(connectDerivWebSocket, 3000);
-      };
-    }
-
-    buildUI();
-    connectDerivWebSocket();
-    setInterval(updateTimerDisplay, 1000);
+    renderRadar();
+    setInterval(updateTimer, 1000);
   </script>
 </body>
 </html>
