@@ -3,33 +3,49 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>M15 Strategy Signal Engine</title>
+  <title>M15 Pro Chart Analyzer & Signal Scanner</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background-color: #080c14;
+      background-color: #060911;
       color: #f1f5f9;
-      padding: 16px;
-      max-width: 520px;
+      padding: 14px;
+      max-width: 560px;
       margin: 0 auto;
       padding-bottom: 50px;
     }
-    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-    .header h1 { font-size: 1.2rem; font-weight: 800; color: #ffffff; letter-spacing: 0.5px; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .header h1 { font-size: 1.15rem; font-weight: 800; color: #ffffff; letter-spacing: 0.5px; }
     
-    .status-pill { font-size: 0.68rem; font-weight: 700; padding: 5px 12px; border-radius: 12px; background: #1e293b; color: #38ef7d; border: 1px solid #334155; display: flex; align-items: center; gap: 6px; }
+    .status-pill { font-size: 0.68rem; font-weight: 700; padding: 5px 12px; border-radius: 12px; background: #131d31; color: #38ef7d; border: 1px solid #22324e; display: flex; align-items: center; gap: 6px; }
     .dot { width: 7px; height: 7px; background-color: #38ef7d; border-radius: 50%; }
     .dot.offline { background-color: #ef4444; }
 
-    .category-tabs { display: flex; gap: 6px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px; }
-    .tab {
-      background: #111827;
-      color: #9ca3af;
-      border: 1px solid #1f2937;
-      padding: 8px 14px;
+    .sound-toggle {
+      background: #131d31;
+      border: 1px solid #22324e;
+      color: #94a3b8;
+      padding: 6px 12px;
       border-radius: 6px;
-      font-size: 0.72rem;
+      font-size: 0.7rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .sound-toggle.active { color: #38ef7d; border-color: #059669; }
+
+    .category-tabs { display: flex; gap: 6px; margin-bottom: 14px; overflow-x: auto; padding-bottom: 4px; }
+    .tab {
+      background: #0f172a;
+      color: #9ca3af;
+      border: 1px solid #1e293b;
+      padding: 7px 12px;
+      border-radius: 6px;
+      font-size: 0.7rem;
       font-weight: 700;
       cursor: pointer;
       white-space: nowrap;
@@ -39,24 +55,36 @@
     .signal-list { display: flex; flex-direction: column; gap: 12px; }
     
     .signal-card {
-      background: #0f172a;
-      border: 1px solid #1e293b;
+      background: #0d1322;
+      border: 1px solid #1c273e;
       border-radius: 10px;
       padding: 14px;
       display: flex;
       flex-direction: column;
       gap: 10px;
+      transition: all 0.3s ease;
     }
-    .signal-card.buy-setup { border-color: #059669; background: #062017; }
-    .signal-card.sell-setup { border-color: #e11d48; background: #260f15; }
+    .signal-card.buy-setup { border-color: #10b981; background: #052319; box-shadow: 0 0 12px rgba(16, 185, 129, 0.2); }
+    .signal-card.sell-setup { border-color: #f43f5e; background: #280b12; box-shadow: 0 0 12px rgba(244, 63, 94, 0.2); }
 
     .card-header { display: flex; justify-content: space-between; align-items: center; }
     .market-name { font-size: 0.88rem; font-weight: 800; color: #ffffff; }
     
-    .action-badge { font-size: 0.7rem; font-weight: 800; padding: 4px 10px; border-radius: 4px; letter-spacing: 0.5px; }
+    .action-badge { font-size: 0.68rem; font-weight: 800; padding: 4px 10px; border-radius: 4px; letter-spacing: 0.5px; }
     .badge-buy { background: rgba(52, 211, 153, 0.2); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.4); }
     .badge-sell { background: rgba(244, 63, 94, 0.2); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.4); }
     .badge-wait { background: rgba(156, 163, 175, 0.1); color: #9ca3af; border: 1px solid rgba(156, 163, 175, 0.2); }
+
+    .pattern-tag {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
 
     .metrics-grid {
       display: grid;
@@ -64,12 +92,29 @@
       gap: 6px;
       font-size: 0.72rem;
       font-family: monospace;
-      background: #080c14;
+      background: #060911;
       padding: 8px 10px;
       border-radius: 6px;
       color: #94a3b8;
     }
     .metrics-grid span b { color: #f1f5f9; }
+    .pct-up { color: #34d399 !important; }
+    .pct-down { color: #fb7185 !important; }
+
+    .progress-bar-bg {
+      width: 100%;
+      height: 4px;
+      background: #1c273e;
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 2px;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: #38ef7d;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
 
     .levels-grid {
       display: grid;
@@ -77,7 +122,7 @@
       gap: 6px;
       font-size: 0.72rem;
       font-family: monospace;
-      background: #080c14;
+      background: #060911;
       padding: 8px 10px;
       border-radius: 6px;
       text-align: center;
@@ -89,9 +134,14 @@
 <body>
 
   <div class="header">
-    <h1>M15 Signal Engine</h1>
+    <h1>M15 Live Chart Analyzer</h1>
     <div class="status-pill"><div class="dot" id="conn-dot"></div><span id="conn-text">Connecting</span></div>
   </div>
+
+  <button class="sound-toggle active" id="audio-btn" onclick="toggleAudio()">
+    <span>Audio Execution Alerts</span>
+    <span id="audio-status">ENABLED</span>
+  </button>
 
   <div class="category-tabs">
     <button class="tab active" onclick="switchCategory('ALL', this)">All Markets</button>
@@ -122,19 +172,54 @@
 
     const marketState = {};
     let activeCategory = 'ALL';
+    let audioEnabled = true;
+    let audioCtx = null;
 
     MARKETS.forEach(m => {
       marketState[m.symbol] = {
         price: 0,
+        m15ChangePct: "0.00",
+        trendStrength: 0,
         rsi: 50,
         ema50: 0,
+        pattern: "Analyzing...",
         action: "WAIT",
         entry: "0.00",
         tp: "0.00",
         sl: "0.00",
+        lastAlertState: "WAIT",
         candles: []
       };
     });
+
+    function toggleAudio() {
+      audioEnabled = !audioEnabled;
+      const btn = document.getElementById("audio-btn");
+      const status = document.getElementById("audio-status");
+      if (audioEnabled) {
+        btn.classList.add("active");
+        status.innerText = "ENABLED";
+      } else {
+        btn.classList.remove("active");
+        status.innerText = "DISABLED";
+      }
+    }
+
+    function playBeep(type) {
+      if (!audioEnabled) return;
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        
+        osc.frequency.value = type === 'BUY' ? 880 : 440; 
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.35);
+      } catch(e) {}
+    }
 
     function switchCategory(cat, btn) {
       activeCategory = cat;
@@ -143,7 +228,6 @@
       renderUI();
     }
 
-    // Mathematical RSI Calculation (14 period)
     function calculateRSI(closes, period = 14) {
       if (closes.length < period + 1) return 50;
       let gains = 0, losses = 0;
@@ -159,7 +243,6 @@
       return Math.round(100 - (100 / (1 + rs)));
     }
 
-    // Exponential Moving Average (EMA 50)
     function calculateEMA(closes, period = 50) {
       if (closes.length === 0) return 0;
       let k = 2 / (period + 1);
@@ -170,7 +253,6 @@
       return ema;
     }
 
-    // Average True Range (ATR 14) for Dynamic TP/SL
     function calculateATR(candles, period = 14) {
       if (candles.length < period + 1) return 1.0;
       let trs = [];
@@ -182,32 +264,72 @@
         trs.push(tr);
       }
       let recentTrs = trs.slice(-period);
-      let sum = recentTrs.reduce((a, b) => a + b, 0);
-      return sum / recentTrs.length;
+      return recentTrs.reduce((a, b) => a + b, 0) / recentTrs.length;
     }
 
-    function evaluateStrategy(m, rawCandles) {
+    // Pattern Recognition Engine for M15 Candlesticks
+    function detectCandlePattern(candles) {
+      if (candles.length < 2) return "Standard Candle";
+      const curr = candles[candles.length - 1];
+      const prev = candles[candles.length - 2];
+      
+      const cOpen = Number(curr.open), cClose = Number(curr.close);
+      const cHigh = Number(curr.high), cLow = Number(curr.low);
+      const pOpen = Number(prev.open), pClose = Number(prev.close);
+
+      const cBody = Math.abs(cClose - cOpen);
+      const cRange = cHigh - cLow;
+      if (cRange === 0) return "Standard Candle";
+
+      const upperWick = cHigh - Math.max(cOpen, cClose);
+      const lowerWick = Math.min(cOpen, cClose) - cLow;
+
+      const isBullishEngulfing = (pClose < pOpen) && (cClose > cOpen) && (cClose > pOpen) && (cOpen < pClose);
+      const isBearishEngulfing = (pClose > pOpen) && (cClose < cOpen) && (cClose < pOpen) && (cOpen > pClose);
+      const isHammer = (lowerWick > cBody * 2) && (upperWick < cBody * 0.5);
+      const isShootingStar = (upperWick > cBody * 2) && (lowerWick < cBody * 0.5);
+      const isDoji = (cBody / cRange) < 0.1;
+
+      if (isBullishEngulfing) return "Bullish Engulfing";
+      if (isBearishEngulfing) return "Bearish Engulfing";
+      if (isHammer) return "Bullish Reversal Pinbar";
+      if (isShootingStar) return "Bearish Reversal Pinbar";
+      if (isDoji) return "Doji Indecision";
+      return cClose >= cOpen ? "Bullish M15 Bar" : "Bearish M15 Bar";
+    }
+
+    function evaluateChart(m, rawCandles) {
       if (!rawCandles || rawCandles.length < 55) return;
 
       const closes = rawCandles.map(c => Number(c.close));
       const currentPrice = closes[closes.length - 1];
+      const m15Open = Number(rawCandles[rawCandles.length - 1].open);
+      
+      // Live M15 Candle Percentage Gain/Loss
+      const pctChange = (((currentPrice - m15Open) / m15Open) * 100).toFixed(2);
+      
       const rsi = calculateRSI(closes, 14);
       const ema50 = calculateEMA(closes, 50);
       const atr = calculateATR(rawCandles, 14);
+      const pattern = detectCandlePattern(rawCandles);
+
+      // Trend Strength Score (Normalized Distance from EMA)
+      const distFromEmaPct = Math.abs((currentPrice - ema50) / ema50) * 100;
+      const trendStrength = Math.min(100, Math.round(distFromEmaPct * 80));
 
       let state = marketState[m.symbol];
       state.price = currentPrice;
+      state.m15ChangePct = pctChange;
+      state.trendStrength = trendStrength;
       state.rsi = rsi;
       state.ema50 = ema50;
+      state.pattern = pattern;
       state.entry = currentPrice.toFixed(m.digits);
 
-      // Strategy Criteria (Strict M15 Logic):
-      // BUY Rules: Price > 50 EMA (Bullish Trend), RSI <= 38 (Oversold Pullback), Bullish Reversal Candle Confirmation
-      // SELL Rules: Price < 50 EMA (Bearish Trend), RSI >= 62 (Overbought Pullback), Bearish Reversal Candle Confirmation
       const isBullishTrend = currentPrice > ema50;
       const isBearishTrend = currentPrice < ema50;
-      const isBullishReversal = closes[closes.length - 1] > closes[closes.length - 2];
-      const isBearishReversal = closes[closes.length - 1] < closes[closes.length - 2];
+      const isBullishReversal = pattern.includes("Bullish") || closes[closes.length - 1] > closes[closes.length - 2];
+      const isBearishReversal = pattern.includes("Bearish") || closes[closes.length - 1] < closes[closes.length - 2];
 
       if (isBullishTrend && rsi <= 38 && isBullishReversal) {
         state.action = "BUY";
@@ -222,6 +344,14 @@
         state.tp = "—";
         state.sl = "—";
       }
+
+      // Trigger Audio Alert on New Confirmed Signal
+      if (state.action !== "WAIT" && state.action !== state.lastAlertState) {
+        playBeep(state.action);
+        state.lastAlertState = state.action;
+      } else if (state.action === "WAIT") {
+        state.lastAlertState = "WAIT";
+      }
     }
 
     function renderUI() {
@@ -232,21 +362,33 @@
         let state = marketState[m.symbol];
         let cardClass = state.action === "BUY" ? "buy-setup" : (state.action === "SELL" ? "sell-setup" : "");
         let badgeClass = state.action === "BUY" ? "badge-buy" : (state.action === "SELL" ? "badge-sell" : "badge-wait");
+        let pctClass = Number(state.m15ChangePct) >= 0 ? "pct-up" : "pct-down";
 
         return `
           <div class="signal-card ${cardClass}">
             <div class="card-header">
-              <span class="market-name">${m.name}</span>
+              <div>
+                <div class="market-name">${m.name}</div>
+                <div class="pattern-tag">${state.pattern}</div>
+              </div>
               <span class="action-badge ${badgeClass}">M15 ${state.action}</span>
             </div>
+
             <div class="metrics-grid">
               <span>Price: <b>${state.price ? state.price.toFixed(m.digits) : 'Loading...'}</b></span>
+              <span>M15 Change: <b class="${pctClass}">${state.m15ChangePct}%</b></span>
               <span>RSI (14): <b>${state.rsi}</b></span>
               <span>50 EMA: <b>${state.ema50 ? state.ema50.toFixed(m.digits) : '...'}</b></span>
-              <span>Trend: <b>${state.price > state.ema50 ? 'Bullish' : 'Bearish'}</b></span>
+              <span style="grid-column: span 2;">
+                Trend Momentum: <b>${state.price > state.ema50 ? 'Bullish' : 'Bearish'} (${state.trendStrength}%)</b>
+                <div class="progress-bar-bg">
+                  <div class="progress-bar-fill" style="width: ${state.trendStrength}%;"></div>
+                </div>
+              </span>
             </div>
+
             <div class="levels-grid">
-              <div><b>Entry Price</b>${state.entry}</div>
+              <div><b>Entry Level</b>${state.entry}</div>
               <div><b>Take Profit</b>${state.tp}</div>
               <div><b>Stop Loss</b>${state.sl}</div>
             </div>
@@ -262,7 +404,6 @@
         document.getElementById("conn-dot").className = "dot";
         document.getElementById("conn-text").innerText = "M15 FEED LIVE";
 
-        // Fetch M15 historical candles (granularity = 900 seconds)
         MARKETS.forEach(m => {
           ws.send(JSON.stringify({
             ticks_history: m.symbol,
@@ -284,7 +425,7 @@
           if (marketState[symbol]) {
             marketState[symbol].candles = data.candles;
             const mObj = MARKETS.find(x => x.symbol === symbol);
-            if (mObj) evaluateStrategy(mObj, marketState[symbol].candles);
+            if (mObj) evaluateChart(mObj, marketState[symbol].candles);
             renderUI();
           }
         }
@@ -300,7 +441,7 @@
             if (price < activeCandle.low) activeCandle.low = price;
 
             const mObj = MARKETS.find(x => x.symbol === symbol);
-            if (mObj) evaluateStrategy(mObj, marketState[symbol].candles);
+            if (mObj) evaluateChart(mObj, marketState[symbol].candles);
             renderUI();
           }
         }
