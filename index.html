@@ -3,46 +3,33 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MT5 M15 Strategy Reader - Live Scanner</title>
+  <title>M15 Strategy Signal Engine</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background-color: #0b0f19;
+      background-color: #080c14;
       color: #f1f5f9;
       padding: 16px;
       max-width: 520px;
       margin: 0 auto;
-      padding-bottom: 60px;
+      padding-bottom: 50px;
     }
-    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-    .header h1 { font-size: 1.15rem; font-weight: 800; letter-spacing: 0.5px; color: #ffffff; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .header h1 { font-size: 1.2rem; font-weight: 800; color: #ffffff; letter-spacing: 0.5px; }
     
-    .status-pill { font-size: 0.68rem; font-weight: 700; padding: 4px 10px; border-radius: 12px; background: #1e293b; color: #38ef7d; border: 1px solid #334155; display: flex; align-items: center; gap: 6px; }
-    .dot { width: 6px; height: 6px; background-color: #38ef7d; border-radius: 50%; }
+    .status-pill { font-size: 0.68rem; font-weight: 700; padding: 5px 12px; border-radius: 12px; background: #1e293b; color: #38ef7d; border: 1px solid #334155; display: flex; align-items: center; gap: 6px; }
+    .dot { width: 7px; height: 7px; background-color: #38ef7d; border-radius: 50%; }
     .dot.offline { background-color: #ef4444; }
-
-    .timer-card {
-      background: #111827;
-      border: 1px solid #1f2937;
-      border-radius: 10px;
-      padding: 12px 16px;
-      margin-bottom: 16px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .timer-card .lbl { font-size: 0.7rem; color: #9ca3af; font-weight: 700; text-transform: uppercase; }
-    .timer-card .clock { font-family: monospace; font-size: 1.2rem; font-weight: 800; color: #38ef7d; }
 
     .category-tabs { display: flex; gap: 6px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px; }
     .tab {
       background: #111827;
       color: #9ca3af;
       border: 1px solid #1f2937;
-      padding: 6px 12px;
+      padding: 8px 14px;
       border-radius: 6px;
-      font-size: 0.7rem;
+      font-size: 0.72rem;
       font-weight: 700;
       cursor: pointer;
       white-space: nowrap;
@@ -52,23 +39,23 @@
     .signal-list { display: flex; flex-direction: column; gap: 12px; }
     
     .signal-card {
-      background: #111827;
-      border: 1px solid #1f2937;
+      background: #0f172a;
+      border: 1px solid #1e293b;
       border-radius: 10px;
       padding: 14px;
       display: flex;
       flex-direction: column;
       gap: 10px;
     }
-    .signal-card.buy-setup { border-color: #059669; background: #061a14; }
-    .signal-card.sell-setup { border-color: #e11d48; background: #220d13; }
+    .signal-card.buy-setup { border-color: #059669; background: #062017; }
+    .signal-card.sell-setup { border-color: #e11d48; background: #260f15; }
 
     .card-header { display: flex; justify-content: space-between; align-items: center; }
-    .market-name { font-size: 0.85rem; font-weight: 700; color: #ffffff; }
+    .market-name { font-size: 0.88rem; font-weight: 800; color: #ffffff; }
     
-    .action-badge { font-size: 0.65rem; font-weight: 800; padding: 4px 8px; border-radius: 4px; letter-spacing: 0.5px; }
-    .badge-buy { background: rgba(52, 211, 153, 0.2); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.3); }
-    .badge-sell { background: rgba(244, 63, 94, 0.2); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.3); }
+    .action-badge { font-size: 0.7rem; font-weight: 800; padding: 4px 10px; border-radius: 4px; letter-spacing: 0.5px; }
+    .badge-buy { background: rgba(52, 211, 153, 0.2); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.4); }
+    .badge-sell { background: rgba(244, 63, 94, 0.2); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.4); }
     .badge-wait { background: rgba(156, 163, 175, 0.1); color: #9ca3af; border: 1px solid rgba(156, 163, 175, 0.2); }
 
     .metrics-grid {
@@ -77,7 +64,7 @@
       gap: 6px;
       font-size: 0.72rem;
       font-family: monospace;
-      background: #0b0f19;
+      background: #080c14;
       padding: 8px 10px;
       border-radius: 6px;
       color: #94a3b8;
@@ -90,7 +77,7 @@
       gap: 6px;
       font-size: 0.72rem;
       font-family: monospace;
-      background: #0b0f19;
+      background: #080c14;
       padding: 8px 10px;
       border-radius: 6px;
       text-align: center;
@@ -102,16 +89,8 @@
 <body>
 
   <div class="header">
-    <h1>MT5 M15 Strategy Reader</h1>
+    <h1>M15 Signal Engine</h1>
     <div class="status-pill"><div class="dot" id="conn-dot"></div><span id="conn-text">Connecting</span></div>
-  </div>
-
-  <div class="timer-card">
-    <div>
-      <div class="lbl">M15 Candle Close Countdown</div>
-      <div style="font-size: 0.6rem; color: #6b7280;">Real-time MT5 timeframe emulation</div>
-    </div>
-    <div class="clock" id="m15-countdown">15:00</div>
   </div>
 
   <div class="category-tabs">
@@ -143,7 +122,6 @@
 
     const marketState = {};
     let activeCategory = 'ALL';
-    let timeLeft = 900;
 
     MARKETS.forEach(m => {
       marketState[m.symbol] = {
@@ -181,7 +159,7 @@
       return Math.round(100 - (100 / (1 + rs)));
     }
 
-    // Mathematical Exponential Moving Average (EMA 50)
+    // Exponential Moving Average (EMA 50)
     function calculateEMA(closes, period = 50) {
       if (closes.length === 0) return 0;
       let k = 2 / (period + 1);
@@ -192,14 +170,14 @@
       return ema;
     }
 
-    // Mathematical Average True Range (ATR 14)
+    // Average True Range (ATR 14) for Dynamic TP/SL
     function calculateATR(candles, period = 14) {
       if (candles.length < period + 1) return 1.0;
       let trs = [];
       for (let i = 1; i < candles.length; i++) {
-        let high = candles[i].high || candles[i].close;
-        let low = candles[i].low || candles[i].close;
-        let prevClose = candles[i - 1].close;
+        let high = Number(candles[i].high) || Number(candles[i].close);
+        let low = Number(candles[i].low) || Number(candles[i].close);
+        let prevClose = Number(candles[i - 1].close);
         let tr = Math.max(high - low, Math.abs(high - prevClose), Math.abs(low - prevClose));
         trs.push(tr);
       }
@@ -208,7 +186,7 @@
       return sum / recentTrs.length;
     }
 
-    function evaluateMT5Strategy(m, rawCandles) {
+    function evaluateStrategy(m, rawCandles) {
       if (!rawCandles || rawCandles.length < 55) return;
 
       const closes = rawCandles.map(c => Number(c.close));
@@ -223,22 +201,22 @@
       state.ema50 = ema50;
       state.entry = currentPrice.toFixed(m.digits);
 
-      // Strict MT5 M15 Strategy Rule Set:
-      // BUY: Price above 50 EMA (Bullish Trend), RSI dips <= 35 (Oversold pullback), and latest close is higher than prior close.
-      // SELL: Price below 50 EMA (Bearish Trend), RSI spikes >= 65 (Overbought pullback), and latest close is lower than prior close.
+      // Strategy Criteria (Strict M15 Logic):
+      // BUY Rules: Price > 50 EMA (Bullish Trend), RSI <= 38 (Oversold Pullback), Bullish Reversal Candle Confirmation
+      // SELL Rules: Price < 50 EMA (Bearish Trend), RSI >= 62 (Overbought Pullback), Bearish Reversal Candle Confirmation
       const isBullishTrend = currentPrice > ema50;
       const isBearishTrend = currentPrice < ema50;
-      const isPullbackReversingUp = closes[closes.length - 1] > closes[closes.length - 2];
-      const isPullbackReversingDown = closes[closes.length - 1] < closes[closes.length - 2];
+      const isBullishReversal = closes[closes.length - 1] > closes[closes.length - 2];
+      const isBearishReversal = closes[closes.length - 1] < closes[closes.length - 2];
 
-      if (isBullishTrend && rsi <= 35 && isPullbackReversingUp) {
+      if (isBullishTrend && rsi <= 38 && isBullishReversal) {
         state.action = "BUY";
-        state.tp = (currentPrice + (atr * 2.5)).toFixed(m.digits);
-        state.sl = (currentPrice - (atr * 1.5)).toFixed(m.digits);
-      } else if (isBearishTrend && rsi >= 65 && isPullbackReversingDown) {
+        state.tp = (currentPrice + (atr * 2.0)).toFixed(m.digits);
+        state.sl = (currentPrice - (atr * 1.0)).toFixed(m.digits);
+      } else if (isBearishTrend && rsi >= 62 && isBearishReversal) {
         state.action = "SELL";
-        state.tp = (currentPrice - (atr * 2.5)).toFixed(m.digits);
-        state.sl = (currentPrice + (atr * 1.5)).toFixed(m.digits);
+        state.tp = (currentPrice - (atr * 2.0)).toFixed(m.digits);
+        state.sl = (currentPrice + (atr * 1.0)).toFixed(m.digits);
       } else {
         state.action = "WAIT";
         state.tp = "—";
@@ -263,7 +241,7 @@
             </div>
             <div class="metrics-grid">
               <span>Price: <b>${state.price ? state.price.toFixed(m.digits) : 'Loading...'}</b></span>
-              <span>RSI(14): <b>${state.rsi}</b></span>
+              <span>RSI (14): <b>${state.rsi}</b></span>
               <span>50 EMA: <b>${state.ema50 ? state.ema50.toFixed(m.digits) : '...'}</b></span>
               <span>Trend: <b>${state.price > state.ema50 ? 'Bullish' : 'Bearish'}</b></span>
             </div>
@@ -277,24 +255,14 @@
       }).join('');
     }
 
-    function updateTimer() {
-      let m = Math.floor(timeLeft / 60);
-      let s = timeLeft % 60;
-      document.getElementById("m15-countdown").innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
-      if (timeLeft > 0) {
-        timeLeft--;
-      } else {
-        timeLeft = 900;
-      }
-    }
-
     function connectWebSocket() {
       const ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=1089");
 
       ws.onopen = () => {
         document.getElementById("conn-dot").className = "dot";
-        document.getElementById("conn-text").innerText = "MT5 FEED LIVE";
+        document.getElementById("conn-text").innerText = "M15 FEED LIVE";
 
+        // Fetch M15 historical candles (granularity = 900 seconds)
         MARKETS.forEach(m => {
           ws.send(JSON.stringify({
             ticks_history: m.symbol,
@@ -316,7 +284,7 @@
           if (marketState[symbol]) {
             marketState[symbol].candles = data.candles;
             const mObj = MARKETS.find(x => x.symbol === symbol);
-            if (mObj) evaluateMT5Strategy(mObj, marketState[symbol].candles);
+            if (mObj) evaluateStrategy(mObj, marketState[symbol].candles);
             renderUI();
           }
         }
@@ -326,13 +294,13 @@
           const price = data.tick.quote;
           if (marketState[symbol] && marketState[symbol].candles.length > 0) {
             marketState[symbol].price = price;
-            let currentCandle = marketState[symbol].candles[marketState[symbol].candles.length - 1];
-            currentCandle.close = price;
-            if (price > currentCandle.high) currentCandle.high = price;
-            if (price < currentCandle.low) currentCandle.low = price;
+            let activeCandle = marketState[symbol].candles[marketState[symbol].candles.length - 1];
+            activeCandle.close = price;
+            if (price > activeCandle.high) activeCandle.high = price;
+            if (price < activeCandle.low) activeCandle.low = price;
 
             const mObj = MARKETS.find(x => x.symbol === symbol);
-            if (mObj) evaluateMT5Strategy(mObj, marketState[symbol].candles);
+            if (mObj) evaluateStrategy(mObj, marketState[symbol].candles);
             renderUI();
           }
         }
@@ -340,7 +308,7 @@
 
       ws.onerror = () => {
         document.getElementById("conn-dot").className = "dot offline";
-        document.getElementById("conn-text").innerText = "CONNECTION ERROR";
+        document.getElementById("conn-text").innerText = "ERROR";
       };
 
       ws.onclose = () => {
@@ -352,7 +320,6 @@
 
     renderUI();
     connectWebSocket();
-    setInterval(updateTimer, 1000);
   </script>
 </body>
 </html>
