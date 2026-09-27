@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>A.P.A. PRO - 15-Minute Timeframe Engine</title>
+  <title>A.P.A. PRO - Live Deriv M15 Engine</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -20,6 +20,7 @@
     
     .bot-badge { background: #13272d; color: #38ef7d; border: 1px solid #1c4538; font-size: 0.7rem; font-weight: 700; padding: 6px 12px; border-radius: 20px; display: flex; align-items: center; gap: 6px; }
     .dot { width: 6px; height: 6px; background-color: #38ef7d; border-radius: 50%; box-shadow: 0 0 0 rgba(56, 239, 125, 0.4); animation: pulse 2s infinite; }
+    .dot.offline { background-color: #f43f5e; box-shadow: 0 0 0 rgba(244, 63, 94, 0.4); }
     @keyframes pulse {
       0% { box-shadow: 0 0 0 0 rgba(56, 239, 125, 0.7); }
       70% { box-shadow: 0 0 0 6px rgba(56, 239, 125, 0); }
@@ -149,7 +150,7 @@
 
   <div class="header">
     <h1>A.P.A. PRO</h1>
-    <div class="bot-badge"><div class="dot"></div> 15M TF LOCKED</div>
+    <div class="bot-badge"><div class="dot" id="ws-dot"></div> <span id="ws-status-text">CONNECTING WS</span></div>
   </div>
 
   <button class="notify-btn" id="notify-btn" onclick="requestNotificationPermission()">
@@ -157,7 +158,7 @@
   </button>
 
   <div class="tf-indicator-box">
-    <span>ACTIVE TIMEFRAME: M15 (15-Minute Candle Close)</span>
+    <span>LIVE M15 FEED (DERIV WS API)</span>
     <span id="candle-timer" style="font-family: monospace;">14:59</span>
   </div>
 
@@ -168,7 +169,7 @@
   </div>
 
   <div class="activity-ticker" id="activity-ticker">
-    <span>[SYSTEM]:</span> Monitoring 15-minute candle structure for clean multi-indicator breakouts...
+    <span>[SYSTEM]:</span> Initializing secure WebSocket connection to live Deriv API feeds...
   </div>
 
   <div class="metrics-grid">
@@ -182,7 +183,7 @@
       <span id="log-count" style="color: #38ef7d;">0 recorded</span>
     </div>
     <div class="history-list" id="history-log-container">
-      <div style="color: #64748b;">Waiting for 15-minute candle close confirmation...</div>
+      <div style="color: #64748b;">Waiting for live price synchronization...</div>
     </div>
   </div>
 
@@ -191,7 +192,7 @@
       <div class="section-title-sub">M15 CONFLUENCE RADAR</div>
       <div class="section-title">Active Focus</div>
     </div>
-    <div class="live-tag">M15 LIVE</div>
+    <div class="live-tag">REAL-TIME</div>
   </div>
 
   <div class="radar-list" id="radar-list"></div>
@@ -199,7 +200,7 @@
   <div class="closest-card">
     <div class="closest-left">
       <div class="label">CLOSEST TO M15 SETUP</div>
-      <div class="val" id="closest-asset">Scanning...</div>
+      <div class="val" id="closest-asset">Connecting...</div>
     </div>
     <div class="closest-right">
       <div class="label">STATUS</div>
@@ -212,46 +213,39 @@
     const TELEGRAM_CHAT_ID = "5913949259";
 
     let currentFilter = 'ALL';
-    let candleSecondsLeft = 900; // 15 minutes in seconds
+    let candleSecondsLeft = 900; 
 
     const MARKETS = [
-      { id: "01", symbol: "R_10", name: "Volatility 10 Index", group: "VOL", base: 1200, digits: 2, atr: 1.5 },
-      { id: "02", symbol: "R_25", name: "Volatility 25 Index", group: "VOL", base: 2400, digits: 2, atr: 3.0 },
-      { id: "03", symbol: "R_50", name: "Volatility 50 Index", group: "VOL", base: 5100, digits: 2, atr: 6.0 },
-      { id: "04", symbol: "R_75", name: "Volatility 75 Index", group: "VOL", base: 7800, digits: 2, atr: 10.0 },
-      { id: "05", symbol: "R_100", name: "Volatility 100 Index", group: "VOL", base: 10500, digits: 2, atr: 14.0 },
-      { id: "06", symbol: "1HZ10V", name: "Volatility 10 (1s)", group: "VOL", base: 1050, digits: 2, atr: 1.2 },
-      { id: "07", symbol: "1HZ25V", name: "Volatility 25 (1s)", group: "VOL", base: 2200, digits: 2, atr: 2.5 },
-      { id: "08", symbol: "1HZ50V", name: "Volatility 50 (1s)", group: "VOL", base: 4900, digits: 2, atr: 5.5 },
-      { id: "09", symbol: "1HZ75V", name: "Volatility 75 (1s)", group: "VOL", base: 7200, digits: 2, atr: 9.0 },
-      { id: "10", symbol: "1HZ100V", name: "Volatility 100 (1s)", group: "VOL", base: 9800, digits: 2, atr: 12.5 },
-      { id: "11", symbol: "stpRNG", name: "Step Index", group: "ELITE", base: 5000, digits: 2, atr: 5.0 },
-      { id: "12", symbol: "JD75", name: "Jump 75 Index", group: "ELITE", base: 45000, digits: 2, atr: 45.0 }
+      { id: "01", symbol: "R_10", name: "Volatility 10 Index", group: "VOL", digits: 2, atr: 1.5 },
+      { id: "02", symbol: "R_25", name: "Volatility 25 Index", group: "VOL", digits: 2, atr: 3.0 },
+      { id: "03", symbol: "R_50", name: "Volatility 50 Index", group: "VOL", digits: 2, atr: 6.0 },
+      { id: "04", symbol: "R_75", name: "Volatility 75 Index", group: "VOL", digits: 2, atr: 10.0 },
+      { id: "05", symbol: "R_100", name: "Volatility 100 Index", group: "VOL", digits: 2, atr: 14.0 },
+      { id: "06", symbol: "1HZ10V", name: "Volatility 10 (1s)", group: "VOL", digits: 2, atr: 1.2 },
+      { id: "07", symbol: "1HZ25V", name: "Volatility 25 (1s)", group: "VOL", digits: 2, atr: 2.5 },
+      { id: "08", symbol: "1HZ50V", name: "Volatility 50 (1s)", group: "VOL", digits: 2, atr: 5.5 },
+      { id: "09", symbol: "1HZ75V", name: "Volatility 75 (1s)", group: "VOL", digits: 2, atr: 9.0 },
+      { id: "10", symbol: "1HZ100V", name: "Volatility 100 (1s)", group: "VOL", digits: 2, atr: 12.5 },
+      { id: "11", symbol: "stpRNG", name: "Step Index", group: "ELITE", digits: 2, atr: 5.0 },
+      { id: "12", symbol: "JD75", name: "Jump 75 Index", group: "ELITE", digits: 2, atr: 45.0 }
     ];
 
     const marketState = {};
     const signalLogs = [];
 
     MARKETS.forEach(m => {
-      let dummyCandles = [];
-      let p = m.base;
-      for(let i=0; i<35; i++) {
-        p += (Math.random() - 0.49) * (m.base * 0.002);
-        dummyCandles.push(p);
-      }
-
       marketState[m.symbol] = { 
         status: "WAITING", 
-        currentPrice: m.base,
+        currentPrice: 0,
         type: "BUY",
         rsi: 50,
         macd: "Neutral",
         score: 40,
-        entry: m.base.toFixed(m.digits),
-        tp: (m.base + m.atr * 3).toFixed(m.digits),
-        sl: (m.base - m.atr * 1.5).toFixed(m.digits),
+        entry: "0.00",
+        tp: "0.00",
+        sl: "0.00",
         lastAlertTime: 0,
-        candles: dummyCandles
+        candles: []
       };
     });
 
@@ -288,7 +282,7 @@
         Notification.requestPermission().then(permission => {
           if (permission === "granted") {
             const btn = document.getElementById("notify-btn");
-            btn.innerText = "🔔 15M NOTIFICATIONS & AUDIO ACTIVE";
+            btn.innerText = "🔔 15M LIVE NOTIFICATIONS & AUDIO ACTIVE";
             btn.style.borderColor = "#38ef7d";
             logActivity("M15 browser notifications enabled.");
           }
@@ -323,8 +317,9 @@
 
     function analyzeMarket(m) {
       let state = marketState[m.symbol];
-      let closes = state.candles;
+      if (state.candles.length < 15) return;
       
+      let closes = state.candles;
       let rsi = calculateRSI(closes, 14);
       state.rsi = rsi;
 
@@ -340,9 +335,6 @@
         state.type = "SELL";
       }
 
-      // Exact MT5 Order Execution Price alignment rules:
-      // When BUY -> MT5 uses Ask price (Current Price). TP is Above, SL is Below.
-      // When SELL -> MT5 uses Bid price (Current Price). TP is Below, SL is Above.
       const currentPriceNum = parseFloat(state.currentPrice);
       state.entry = currentPriceNum.toFixed(m.digits);
 
@@ -354,7 +346,6 @@
         state.sl = (currentPriceNum + (m.atr * 1.5)).toFixed(m.digits);
       }
 
-      // M15 strict filter thresholds
       let score = 50;
       if (state.type === "BUY" && rsi <= 38) {
         score = 90; 
@@ -363,13 +354,12 @@
       } else {
         score = 45; 
       }
-
       state.score = score;
     }
 
     function recordSignalLog(name, symbol, type, rsi) {
       const time = new Date().toLocaleTimeString();
-      signalLogs.unshift(`[${time}] M15 SIGNAL LOCKED ${type} | ${name} (RSI: ${rsi})`);
+      signalLogs.unshift(`[${time}] LIVE M15 SIGNAL LOCKED ${type} | ${name} (RSI: ${rsi})`);
       if (signalLogs.length > 25) signalLogs.pop();
 
       const container = document.getElementById("history-log-container");
@@ -380,23 +370,23 @@
     function triggerNotifications(name, symbol, type, entry, tp, sl, rsi) {
       let state = marketState[symbol];
       let now = Date.now();
-      let cooldownMs = 60000; // 1-minute safety lock
+      let cooldownMs = 60000; 
 
       if (now - state.lastAlertTime > cooldownMs) {
         state.lastAlertTime = now; 
         playBeep();
         recordSignalLog(name, symbol, type, rsi);
-        logActivity(`🚨 15M CANDLE CLOSE SETUP: ${name} (${type})`);
+        logActivity(`🚨 LIVE M15 SETUP: ${name} (${type})`);
 
         if (Notification.permission === "granted") {
-          new Notification(`M15 Signal [${type}]: ${name}`, { body: `Price: ${entry} | RSI: ${rsi}` });
+          new Notification(`Live M15 Signal [${type}]: ${name}`, { body: `Price: ${entry} | RSI: ${rsi}` });
         }
 
         if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
           const emoji = type === "BUY" ? "🟢" : "🔴";
-          const msg = `🚨 *A.P.A. 15-MINUTE CANDLE CLOSE SIGNAL* ${emoji}\n\n` +
+          const msg = `🚨 *A.P.A. LIVE 15M CANDLE CLOSE SIGNAL* ${emoji}\n\n` +
                       `📊 Symbol: \`${symbol}\` (${name})\n` +
-                      `⏱️ Timeframe: 15-Minute Chart\n` +
+                      `⏱️ Timeframe: Live 15-Minute Feed\n` +
                       `🎯 *Action:* EXECUTE ${type} ON MT5\n` +
                       `📌 *Entry:* \`${entry}\` | *TP:* \`${tp}\` | *SL:* \`${sl}\`\n` +
                       `📊 RSI: ${rsi} | MACD: ${state.macd}`;
@@ -511,32 +501,89 @@
       if (candleSecondsLeft > 0) {
         candleSecondsLeft--;
       } else {
-        candleSecondsLeft = 900; // Reset 15m candle
-        logActivity("[M15]: New 15-minute candle closed. Re-evaluating indicators.");
+        candleSecondsLeft = 900; 
+        logActivity("[M15]: New 15-minute candle session active.");
       }
     }
 
-    // Engine loop simulating M15 candle updates
-    function runConfluenceEngine() {
-      setInterval(() => {
-        const m = MARKETS[Math.floor(Math.random() * MARKETS.length)];
-        let state = marketState[m.symbol];
+    // Connect to Deriv Public WebSocket API for Real-Time Ticks & History
+    function connectDerivWebSocket() {
+      const ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=1089");
 
-        let change = (Math.random() - 0.495) * (m.base * 0.0015);
-        state.currentPrice += change;
+      ws.onopen = () => {
+        document.getElementById("ws-dot").className = "dot";
+        document.getElementById("ws-status-text").innerText = "LIVE DERIV WS";
+        logActivity("[WS]: Connected to Deriv live feed. Subscribing to market streams...");
 
-        state.candles.push(state.currentPrice);
-        if (state.candles.length > 40) state.candles.shift();
+        // Request historical candles (M15 / 900s) and subscribe to live ticks for each asset
+        MARKETS.forEach(m => {
+          // Fetch historical M15 candles for indicators
+          ws.send(JSON.stringify({
+            ticks_history: m.symbol,
+            adjust_start_time: 1,
+            count: 40,
+            end: "latest",
+            granularity: 900,
+            style: "candles"
+          }));
 
-        analyzeMarket(m);
-        updateUIElements();
-      }, 1500);
+          // Subscribe to live tick stream for precise real-time entry updates
+          ws.send(JSON.stringify({
+            ticks: m.symbol,
+            subscribe: 1
+          }));
+        });
+      };
 
-      setInterval(updateTimerDisplay, 1000);
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        
+        // Handle historical candles response
+        if (data.msg_type === "candles" && data.candles) {
+          const symbol = data.echo_req.ticks_history;
+          if (marketState[symbol]) {
+            marketState[symbol].candles = data.candles.map(c => c.close);
+            marketState[symbol].currentPrice = data.candles[data.candles.length - 1].close;
+            const marketObj = MARKETS.find(x => x.symbol === symbol);
+            if (marketObj) analyzeMarket(marketObj);
+            updateUIElements();
+          }
+        }
+
+        // Handle live tick stream updates
+        if (data.msg_type === "tick" && data.tick) {
+          const symbol = data.tick.symbol;
+          const price = data.tick.quote;
+          if (marketState[symbol]) {
+            marketState[symbol].currentPrice = price;
+            // Update latest candle close in real-time
+            if (marketState[symbol].candles.length > 0) {
+              marketState[symbol].candles[marketState[symbol].candles.length - 1] = price;
+            }
+            const marketObj = MARKETS.find(x => x.symbol === symbol);
+            if (marketObj) analyzeMarket(marketObj);
+            updateUIElements();
+          }
+        }
+      };
+
+      ws.onerror = (err) => {
+        document.getElementById("ws-dot").className = "dot offline";
+        document.getElementById("ws-status-text").innerText = "WS ERROR";
+        logActivity("[WS ERROR]: Connection issue detected. Retrying...");
+      };
+
+      ws.onclose = () => {
+        document.getElementById("ws-dot").className = "dot offline";
+        document.getElementById("ws-status-text").innerText = "RECONNECTING";
+        logActivity("[WS]: Connection closed. Re-establishing link in 3 seconds...");
+        setTimeout(connectDerivWebSocket, 3000);
+      };
     }
 
     buildUI();
-    runConfluenceEngine();
+    connectDerivWebSocket();
+    setInterval(updateTimerDisplay, 1000);
   </script>
 </body>
 </html>
