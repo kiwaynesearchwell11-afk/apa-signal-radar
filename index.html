@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>A.P.A. M15 PRO - Full Market Confluence Engine</title>
+  <title>A.P.A. M15 PRO - Smart Market Reader</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -70,13 +70,14 @@
 
     .radar-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; max-height: 460px; overflow-y: auto; padding-right: 4px; }
     .radar-card { background: #111827; border: 1px solid #1f293d; border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
-    .radar-card.ready { border-color: #38ef7d; background: #112222; }
+    .radar-card.ready-buy { border-color: #38ef7d; background: #112222; }
+    .radar-card.ready-sell { border-color: #f43f5e; background: #221115; }
 
     .card-top { display: flex; justify-content: space-between; align-items: center; }
     .asset-name { font-size: 0.85rem; font-weight: 700; color: #ffffff; }
     .badge { font-size: 0.65rem; font-weight: 800; padding: 3px 8px; border-radius: 4px; }
-    .badge-buy { background: rgba(56, 239, 125, 0.15); color: #38ef7d; }
-    .badge-sell { background: rgba(244, 63, 94, 0.15); color: #f43f5e; }
+    .badge-buy { background: rgba(56, 239, 125, 0.2); color: #38ef7d; }
+    .badge-sell { background: rgba(244, 63, 94, 0.2); color: #f43f5e; }
     .badge-wait { background: rgba(100, 116, 139, 0.15); color: #94a3b8; }
 
     .metrics-row { display: flex; justify-content: space-between; font-size: 0.68rem; color: #94a3b8; font-family: monospace; background: #0f172a; padding: 6px 10px; border-radius: 6px; }
@@ -97,8 +98,8 @@
 <body>
 
   <div class="header">
-    <h1>A.P.A. M15 PRO</h1>
-    <div class="bot-badge"><div class="dot" id="ws-dot"></div> <span id="ws-status">CONNECTING...</span></div>
+    <h1>A.P.A. M15 READER</h1>
+    <div class="bot-badge"><div class="dot" id="ws-dot"></div> <span id="ws-status">READING M15...</span></div>
   </div>
 
   <button class="notify-btn" id="notify-btn" onclick="requestNotificationPermission()">
@@ -108,13 +109,13 @@
   <div class="tf-box">
     <div>
       <div class="title">Current M15 Candle Countdown</div>
-      <div style="font-size: 0.62rem; color: #64748b;">Live Deriv WebSocket synchronization</div>
+      <div style="font-size: 0.62rem; color: #64748b;">Smart structure evaluation engine</div>
     </div>
     <div class="timer" id="m15-timer">15:00</div>
   </div>
 
   <div class="filter-tabs">
-    <button class="tab-btn active" onclick="setFilter('ALL', this)">All Volatility & Elite (14)</button>
+    <button class="tab-btn active" onclick="setFilter('ALL', this)">All Markets (14)</button>
     <button class="tab-btn" onclick="setFilter('STD', this)">Standard Vol</button>
     <button class="tab-btn" onclick="setFilter('1S', this)">1-Second Vol</button>
     <button class="tab-btn" onclick="setFilter('ELITE', this)">Step & Jump</button>
@@ -129,7 +130,6 @@
     let currentFilter = 'ALL';
     let timeLeft = 900; 
 
-    // Complete list of standard volatility, 1s volatility, step, and jump indices available on Deriv WS API
     const MARKETS = [
       { symbol: "R_10", name: "Volatility 10 Index", group: "STD", digits: 2, atr: 1.5 },
       { symbol: "R_25", name: "Volatility 25 Index", group: "STD", digits: 2, atr: 3.0 },
@@ -153,7 +153,7 @@
       marketState[m.symbol] = {
         price: 0,
         rsi: 50,
-        macd: "Neutral",
+        structure: "Scanning",
         type: "WAIT",
         status: "WAITING",
         entry: "0.00",
@@ -209,56 +209,62 @@
       return Math.round(100 - (100 / (1 + rs)));
     }
 
-    function calculateEMA(data, period) {
-      if (data.length === 0) return 0;
-      let k = 2 / (period + 1);
-      let ema = data[0];
-      for (let i = 1; i < data.length; i++) {
-        ema = (data[i] * k) + (ema * (1 - k));
-      }
-      return ema;
-    }
+    // Advanced M15 Market Structure Reader
+    function readM15MarketStructure(m, candles) {
+      if (candles.length < 10) return;
 
-    function analyzeMarket(m) {
+      const closes = candles;
+      const currentPrice = closes[closes.length - 1];
+      const prevClose = closes[closes.length - 2];
+      const rsi = calculateRSI(closes, 14);
+
+      // Check recent swing direction across last 3 completed 15m candles
+      const recentTrend = closes[closes.length - 1] - closes[closes.length - 4];
+      
       let state = marketState[m.symbol];
-      if (state.candles.length < 15) return;
-
-      let rsi = calculateRSI(state.candles, 14);
+      state.price = currentPrice;
       state.rsi = rsi;
+      state.entry = currentPrice.toFixed(m.digits);
 
-      let ema12 = calculateEMA(state.candles, 12);
-      let ema26 = calculateEMA(state.candles, 26);
-      state.macd = ema12 >= ema26 ? "Bullish Cross" : "Bearish Cross";
-
-      let p = parseFloat(state.price);
-      state.entry = p.toFixed(m.digits);
-
-      if (rsi <= 38 && ema12 >= ema26) {
+      // Decision logic based on M15 reading rules
+      if (rsi < 42 && recentTrend > 0) {
+        // Bullish bounce from oversold zone on M15
         state.type = "BUY";
         state.status = "READY";
-        state.tp = (p + (m.atr * 2.5)).toFixed(m.digits);
-        state.sl = (p - (m.atr * 1.5)).toFixed(m.digits);
-      } else if (rsi >= 62 && ema12 < ema26) {
+        state.structure = "M15 Bullish Bounce";
+        state.tp = (currentPrice + (m.atr * 2.5)).toFixed(m.digits);
+        state.sl = (currentPrice - (m.atr * 1.5)).toFixed(m.digits);
+      } else if (rsi > 58 && recentTrend < 0) {
+        // Bearish rejection from overbought zone on M15
         state.type = "SELL";
         state.status = "READY";
-        state.tp = (p - (m.atr * 2.5)).toFixed(m.digits);
-        state.sl = (p + (m.atr * 1.5)).toFixed(m.digits);
+        state.structure = "M15 Bearish Rejection";
+        state.tp = (currentPrice - (m.atr * 2.5)).toFixed(m.digits);
+        state.sl = (currentPrice + (m.atr * 1.5)).toFixed(m.digits);
       } else {
         state.type = "WAIT";
         state.status = "WAITING";
+        state.structure = "Consolidating";
         state.tp = "—";
         state.sl = "—";
       }
 
-      // Trigger Telegram & audio alert on confirmed M15 setup
+      // Trigger alert when a clear M15 trade execution setup locks in
       if (state.status === "READY" && (Date.now() - state.lastAlert > 60000)) {
         state.lastAlert = Date.now();
         playBeep();
         if (Notification.permission === "granted") {
-          new Notification(`M15 Setup [${state.type}]: ${m.name}`, { body: `Price: ${state.entry} | RSI: ${rsi}` });
+          new Notification(`M15 Execution Signal [${state.type}]: ${m.name}`, { body: `${state.structure} | Price: ${state.entry}` });
         }
         if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
-          const msg = `🚨 *A.P.A. M15 SIGNAL* (${m.name})\nType: *${state.type}*\nEntry: \`${state.entry}\`\nTP: \`${state.tp}\` | SL: \`${state.sl}\`\nRSI: ${rsi} | MACD: ${state.macd}`;
+          const emoji = state.type === "BUY" ? "🟢" : "🔴";
+          const msg = `🚨 *A.P.A. M15 EXECUTION SIGNAL* ${emoji}\n` +
+                      `📊 Asset: \`${m.symbol}\` (${m.name})\n` +
+                      `📌 Action: *EXECUTE ${state.type}*\n` +
+                      `🔍 Setup: ${state.structure}\n` +
+                      `💵 Entry: \`${state.entry}\`\n` +
+                      `🎯 TP: \`${state.tp}\` | 🛑 SL: \`${state.sl}\`\n` +
+                      `📈 RSI(14): ${rsi}`;
           fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(msg)}&parse_mode=Markdown`).catch(()=>{});
         }
       }
@@ -268,18 +274,18 @@
       const container = document.getElementById("m15-radar");
       container.innerHTML = MARKETS.filter(m => currentFilter === 'ALL' || m.group === currentFilter).map(m => {
         let state = marketState[m.symbol];
-        let isReady = state.status === "READY";
+        let cardClass = state.status === "READY" ? (state.type === "BUY" ? "ready-buy" : "ready-sell") : "";
         let badgeClass = state.type === "BUY" ? "badge-buy" : (state.type === "SELL" ? "badge-sell" : "badge-wait");
         
         return `
-          <div class="radar-card ${isReady ? 'ready' : ''}">
+          <div class="radar-card ${cardClass}">
             <div class="card-top">
               <span class="asset-name">${m.name}</span>
               <span class="badge ${badgeClass}">M15 ${state.type}</span>
             </div>
             <div class="metrics-row">
-              <span>RSI(14): ${state.rsi}</span>
-              <span>MACD: ${state.macd}</span>
+              <span>RSI: ${state.rsi}</span>
+              <span>Structure: ${state.structure}</span>
             </div>
             <div class="levels-row">
               <span>Entry: ${state.entry}</span>
@@ -308,13 +314,13 @@
 
       ws.onopen = () => {
         document.getElementById("ws-dot").className = "dot";
-        document.getElementById("ws-status").innerText = "M15 WS SYNCED";
+        document.getElementById("ws-status").innerText = "M15 READER ACTIVE";
         
         MARKETS.forEach(m => {
           ws.send(JSON.stringify({
             ticks_history: m.symbol,
             adjust_start_time: 1,
-            count: 35,
+            count: 30,
             end: "latest",
             granularity: 900,
             style: "candles"
@@ -329,9 +335,8 @@
           const symbol = data.echo_req.ticks_history;
           if (marketState[symbol]) {
             marketState[symbol].candles = data.candles.map(c => c.close);
-            marketState[symbol].price = data.candles[data.candles.length - 1].close;
             const mObj = MARKETS.find(x => x.symbol === symbol);
-            if (mObj) analyzeMarket(mObj);
+            if (mObj) readM15MarketStructure(mObj, marketState[symbol].candles);
             renderRadar();
           }
         }
@@ -344,7 +349,7 @@
               marketState[symbol].candles[marketState[symbol].candles.length - 1] = price;
             }
             const mObj = MARKETS.find(x => x.symbol === symbol);
-            if (mObj) analyzeMarket(mObj);
+            if (mObj) readM15MarketStructure(mObj, marketState[symbol].candles);
             renderRadar();
           }
         }
