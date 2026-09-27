@@ -318,14 +318,14 @@
       TRIGGER_THRESHOLD = parseInt(val);
       document.getElementById("threshold-val").innerText = val + "%";
       logActivity(`Trigger threshold adjusted to ${val}%`);
-      renderUI();
+      renderUI(true);
     }
 
     function setFilter(group, btn) {
       currentFilter = group;
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      renderUI();
+      renderUI(true);
     }
 
     function playBeep() {
@@ -393,10 +393,11 @@
       }
     }
 
-    function renderUI() {
-      const container = document.getElementById("radar-list");
-      container.innerHTML = "";
+    let isInitialRender = true;
 
+    function renderUI(forceRebuild = false) {
+      const container = document.getElementById("radar-list");
+      
       let highestPct = -1;
       let closestAsset = MARKETS[0];
       let readyCount = 0;
@@ -406,6 +407,50 @@
         return marketState[b.symbol].percent - marketState[a.symbol].percent;
       });
 
+      // If filter changed or first run, completely build elements
+      if (isInitialRender || forceRebuild) {
+        container.innerHTML = "";
+        sortedMarkets.forEach(m => {
+          if (currentFilter !== 'ALL' && m.group !== currentFilter) return;
+          
+          const data = marketState[m.symbol];
+          const isBreakout = data.percent >= TRIGGER_THRESHOLD;
+          const card = document.createElement("div");
+          card.className = `radar-card ${isBreakout ? 'active-breakout' : ''}`;
+          card.id = `card-${m.symbol}`;
+          
+          const chartUrl = `https://trade.deriv.com/?market=${m.symbol}`;
+
+          card.innerHTML = `
+            <div class="card-top">
+              <div class="asset-info">
+                <span class="asset-index">${m.id}</span>
+                <div>
+                  <div class="asset-name">${m.name}</div>
+                  <div>
+                    <span class="asset-status status-${data.status}" id="status-${m.symbol}">${data.status}</span>
+                    <span class="type-${data.type}" id="type-${m.symbol}" style="font-size: 0.65rem; font-weight: 800; margin-left: 6px;">${data.type}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="asset-percent" id="pct-${m.symbol}">${data.percent}%</div>
+            </div>
+            <div class="card-actions">
+              <div class="levels-box" id="levels-${m.symbol}">
+                <span>Entry: ${data.entry}</span>
+                <span>TP: ${data.tp}</span>
+                <span>SL: ${data.sl}</span>
+              </div>
+              <a href="${chartUrl}" target="_blank" class="chart-link">📈 Chart</a>
+            </div>
+            <div class="progress-bar"><div class="progress-fill ${isBreakout ? 'green' : ''}" id="prog-${m.symbol}" style="width: ${data.percent}%"></div></div>
+          `;
+          container.appendChild(card);
+        });
+        isInitialRender = false;
+      }
+
+      // Smooth live updates for inner text elements without rebuilding DOM nodes
       sortedMarkets.forEach(m => {
         const data = marketState[m.symbol];
 
@@ -424,42 +469,39 @@
           closestAsset = m;
         }
 
-        if (currentFilter !== 'ALL' && m.group !== currentFilter) {
-          return;
-        }
+        if (currentFilter !== 'ALL' && m.group !== currentFilter) return;
         visibleCount++;
 
-        const isBreakout = data.status === "BREAKOUT";
-        const card = document.createElement("div");
-        card.className = `radar-card ${isBreakout ? 'active-breakout' : ''}`;
-        
-        const chartUrl = `https://trade.deriv.com/?market=${m.symbol}`;
+        // Update elements live if they exist in DOM
+        const pctEl = document.getElementById(`pct-${m.symbol}`);
+        const statusEl = document.getElementById(`status-${m.symbol}`);
+        const typeEl = document.getElementById(`type-${m.symbol}`);
+        const levelsEl = document.getElementById(`levels-${m.symbol}`);
+        const progEl = document.getElementById(`prog-${m.symbol}`);
+        const cardEl = document.getElementById(`card-${m.symbol}`);
 
-        card.innerHTML = `
-          <div class="card-top">
-            <div class="asset-info">
-              <span class="asset-index">${m.id}</span>
-              <div>
-                <div class="asset-name">${m.name}</div>
-                <div>
-                  <span class="asset-status status-${data.status}">${data.status}</span>
-                  <span class="type-${data.type}" style="font-size: 0.65rem; font-weight: 800; margin-left: 6px;">${data.type}</span>
-                </div>
-              </div>
-            </div>
-            <div class="asset-percent">${data.percent}%</div>
-          </div>
-          <div class="card-actions">
-            <div class="levels-box">
-              <span>Entry: ${data.entry}</span>
-              <span>TP: ${data.tp}</span>
-              <span>SL: ${data.sl}</span>
-            </div>
-            <a href="${chartUrl}" target="_blank" class="chart-link">📈 Chart</a>
-          </div>
-          <div class="progress-bar"><div class="progress-fill ${isBreakout ? 'green' : ''}" style="width: ${data.percent}%"></div></div>
-        `;
-        container.appendChild(card);
+        if (pctEl) pctEl.innerText = `${data.percent}%`;
+        if (progEl) {
+          progEl.style.width = `${data.percent}%`;
+          if (data.percent >= TRIGGER_THRESHOLD) {
+            progEl.className = "progress-fill green";
+            if (cardEl) cardEl.className = "radar-card active-breakout";
+          } else {
+            progEl.className = "progress-fill";
+            if (cardEl) cardEl.className = "radar-card";
+          }
+        }
+        if (statusEl) {
+          statusEl.innerText = data.status;
+          statusEl.className = `asset-status status-${data.status}`;
+        }
+        if (typeEl) {
+          typeEl.innerText = data.type;
+          typeEl.className = `type-${data.type}`;
+        }
+        if (levelsEl) {
+          levelsEl.innerHTML = `<span>Entry: ${data.entry}</span><span>TP: ${data.tp}</span><span>SL: ${data.sl}</span>`;
+        }
       });
 
       document.getElementById("ready-count").innerText = readyCount;
@@ -529,18 +571,17 @@
       };
     }
 
-    // Real-time fluctuating ticker loop to ensure numbers are constantly moving smoothly
+    // Real-time fluctuating ticker loop to ensure numbers tick smoothly
     setInterval(() => {
       MARKETS.forEach(m => {
         let state = marketState[m.symbol];
-        // Only shift if they have entry values populated
         if (state.entry !== "0.00") {
-          let fluctuation = Math.floor(Math.random() * 7) - 3; // -3 to +3
+          let fluctuation = Math.floor(Math.random() * 5) - 2; // -2 to +2
           state.percent = Math.min(Math.max(state.percent + fluctuation, 45), 99);
         }
       });
       renderUI();
-    }, 1500);
+    }, 1000);
 
     initWebSocket();
 
