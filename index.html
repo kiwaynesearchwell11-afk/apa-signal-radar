@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>A.P.A. PRO - Secure Token Feed</title>
+  <title>A.P.A. PRO - Real Technical Analysis Engine</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -135,7 +135,7 @@
 
   <div class="header">
     <h1>A.P.A. PRO</h1>
-    <div class="bot-badge"><div class="dot"></div> NEW SECURE TOKEN LOCK</div>
+    <div class="bot-badge"><div class="dot"></div> REAL TECHNICAL ENGINE</div>
   </div>
 
   <button class="notify-btn" id="notify-btn" onclick="requestNotificationPermission()">
@@ -149,7 +149,7 @@
   </div>
 
   <div class="activity-ticker" id="activity-ticker">
-    <span>[SYSTEM]:</span> New Telegram token successfully integrated...
+    <span>[SYSTEM]:</span> Initializing real technical indicator engine...
   </div>
 
   <div class="metrics-grid">
@@ -159,20 +159,20 @@
 
   <div class="history-section">
     <div class="history-title">
-      <span>SECURE SIGNAL LOGS</span>
+      <span>SECURED SIGNAL LOGS</span>
       <span id="log-count" style="color: #38ef7d;">0 recorded</span>
     </div>
     <div class="history-list" id="history-log-container">
-      <div style="color: #64748b;">Waiting for verified asset signals...</div>
+      <div style="color: #64748b;">Waiting for technical indicator convergence...</div>
     </div>
   </div>
 
   <div class="section-header">
     <div>
-      <div class="section-title-sub">SECURED API FEED</div>
+      <div class="section-title-sub">REAL CANDLE ANALYSIS</div>
       <div class="section-title">Active Focus</div>
     </div>
-    <div class="live-tag" id="active-subs-count">SECURE FEED</div>
+    <div class="live-tag" id="active-subs-count">LIVE WS FEED</div>
   </div>
 
   <div class="radar-list" id="radar-list"></div>
@@ -180,7 +180,7 @@
   <div class="closest-card">
     <div class="closest-left">
       <div class="label">CLOSEST TO SETUP</div>
-      <div class="val" id="closest-asset">Syncing live prices...</div>
+      <div class="val" id="closest-asset">Loading historical candles...</div>
     </div>
     <div class="closest-right">
       <div class="label">STATUS</div>
@@ -189,7 +189,6 @@
   </div>
 
   <script>
-    // Updated with your new secure Telegram Token
     const TELEGRAM_BOT_TOKEN = "8212576128:AAEF9EGR9R3FMUjon8Ls4c9GltMw2MB4SvM";
     const TELEGRAM_CHAT_ID = "5913949259";
 
@@ -211,7 +210,6 @@
     ];
 
     const ALLOWED_SYMBOLS = MARKETS.map(m => m.symbol);
-
     const marketState = {};
     const signalLogs = [];
 
@@ -223,11 +221,11 @@
         rsi: 50,
         macd: "Neutral",
         score: 40,
-        trendLockTicks: Math.floor(Math.random() * 8) + 4,
         entry: "0.00",
         tp: "0.00",
         sl: "0.00",
-        lastAlertTime: 0 
+        lastAlertTime: 0,
+        candles: []
       };
     });
 
@@ -272,9 +270,73 @@
       }
     }
 
+    // --- TECHNICAL INDICATOR CALCULATIONS ---
+    function calculateRSI(closes, period = 14) {
+      if (closes.length < period + 1) return 50;
+      let gains = 0;
+      let losses = 0;
+
+      for (let i = 1; i <= period; i++) {
+        const change = closes[closes.length - i] - closes[closes.length - i - 1];
+        if (change >= 0) gains += change;
+        else losses -= change;
+      }
+
+      let avgGain = gains / period;
+      let avgLoss = losses / period;
+
+      if (avgLoss === 0) return 100;
+      let rs = avgGain / avgLoss;
+      return Math.round(100 - (100 / (1 + rs)));
+    }
+
+    function calculateEMA(data, period) {
+      if (data.length === 0) return 0;
+      let k = 2 / (period + 1);
+      let ema = data[0];
+      for (let i = 1; i < data.length; i++) {
+        ema = (data[i] * k) + (ema * (1 - k));
+      }
+      return ema;
+    }
+
+    function analyzeMarket(symbol) {
+      let state = marketState[symbol];
+      let closes = state.candles;
+      if (closes.length < 30) return;
+
+      let rsi = calculateRSI(closes, 14);
+      state.rsi = rsi;
+
+      let ema12 = calculateEMA(closes, 12);
+      let ema26 = calculateEMA(closes, 26);
+      let macdLine = ema12 - ema26;
+
+      if (macdLine > 0) {
+        state.macd = "Bullish Cross";
+        state.type = "BUY";
+      } else {
+        state.macd = "Bearish Cross";
+        state.type = "SELL";
+      }
+
+      // Real Technical Score calculation based on momentum extremity
+      let baseScore = 50;
+      if (state.type === "BUY") {
+        if (rsi < 35) baseScore = 88; // Oversold bounce setup
+        else if (rsi < 45) baseScore = 72;
+        else baseScore = 55;
+      } else {
+        if (rsi > 65) baseScore = 88; // Overbought drop setup
+        else if (rsi > 55) baseScore = 72;
+        else baseScore = 55;
+      }
+      state.score = baseScore;
+    }
+
     function recordSignalLog(name, symbol, type, rsi) {
       const time = new Date().toLocaleTimeString();
-      signalLogs.unshift(`[${time}] LOCKED ${type} | ${name} (RSI: ${rsi})`);
+      signalLogs.unshift(`[${time}] SIGNAL LOCKED ${type} | ${name} (RSI: ${rsi})`);
       if (signalLogs.length > 25) signalLogs.pop();
 
       const container = document.getElementById("history-log-container");
@@ -283,37 +345,35 @@
     }
 
     function triggerNotifications(name, symbol, type, entry, tp, sl, rsi) {
-      if (!ALLOWED_SYMBOLS.includes(symbol)) {
-        console.warn(`BLOCKED GHOST NOTIFICATION FOR UNAUTHORIZED SYMBOL: ${symbol}`);
-        return;
-      }
+      if (!ALLOWED_SYMBOLS.includes(symbol)) return;
 
       let state = marketState[symbol];
       let now = Date.now();
-      let cooldownMs = 300000;
+      let cooldownMs = 300000; // 5 min cooldown per asset
 
       if (now - state.lastAlertTime > cooldownMs && state.currentPrice > 0) {
         state.lastAlertTime = now; 
 
         playBeep();
         recordSignalLog(name, symbol, type, rsi);
-        logActivity(`🚨 VERIFIED SIGNAL LOCKED: ${name} (${type})`);
+        logActivity(`🚨 VERIFIED TECHNICAL SETUP: ${name} (${type})`);
 
         if (Notification.permission === "granted") {
-          new Notification(`MT5 Signal [${type}]: ${name}`, {
+          new Notification(`MT5 Technical Signal [${type}]: ${name}`, {
             body: `Price: ${entry} | RSI: ${rsi} | TP: ${tp}`,
           });
         }
 
         if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
           const emoji = type === "BUY" ? "🟢" : "🔴";
-          const msg = `🚨 *A.P.A. NEW TOKEN SIGNAL* ${emoji}\n\n` +
+          const msg = `🚨 *A.P.A. TECHNICAL SIGNAL* ${emoji}\n\n` +
                       `📊 Symbol: \`${symbol}\` (${name})\n` +
                       `🎯 *Action:* EXECUTE ${type} ON MT5\n` +
                       `📌 *Entry Price:* \`${entry}\`\n` +
                       `💰 *Take Profit:* \`${tp}\`\n` +
                       `🛡️ *Stop Loss:* \`${sl}\`\n\n` +
-                      `📊 RSI: ${rsi}`;
+                      `📊 RSI (14): ${rsi}\n` +
+                      `📈 MACD: ${state.macd}`;
           
           const telegramApiUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(msg)}&parse_mode=Markdown`;
           fetch(telegramApiUrl).then(res => res.json()).catch(err => {});
@@ -420,17 +480,39 @@
       const ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=1089");
 
       ws.onopen = function() {
-        logActivity("Connected to live Deriv API. Subscribing to whitelisted symbols...");
+        logActivity("Connected to Deriv API. Requesting historical candles & tick streams...");
         MARKETS.forEach(m => {
+          // Request historical candles for real RSI/MACD computation
+          ws.send(JSON.stringify({
+            ticks_history: m.symbol,
+            adjust_start_time: 1,
+            count: 50,
+            end: "latest",
+            granularity: 60,
+            style: "candles"
+          }));
+
+          // Subscribe to live ticks for current price updates
           ws.send(JSON.stringify({ ticks: m.symbol }));
         });
       };
 
       ws.onmessage = function(event) {
         const data = JSON.parse(event.data);
+
+        // Handle historical candles response
+        if (data.msg_type === "candles" && data.candles) {
+          const symbol = data.echo_req.ticks_history;
+          if (ALLOWED_SYMBOLS.includes(symbol) && marketState[symbol]) {
+            marketState[symbol].candles = data.candles.map(c => c.close);
+            analyzeMarket(symbol);
+            updateUIElements();
+          }
+        }
+
+        // Handle live incoming ticks
         if (data.msg_type === "tick" && data.tick) {
           const symbol = data.tick.symbol;
-          
           if (!ALLOWED_SYMBOLS.includes(symbol)) return;
 
           const livePrice = data.tick.quote;
@@ -441,6 +523,16 @@
             state.currentPrice = livePrice;
             state.entry = livePrice.toFixed(marketDef.digits);
 
+            // Update live candle closing price array
+            if (state.candles.length > 0) {
+              state.candles[state.candles.length - 1] = livePrice;
+            } else {
+              state.candles.push(livePrice);
+            }
+
+            // Run technical analysis on every tick update
+            analyzeMarket(symbol);
+
             let spreadOffset = livePrice * 0.0012;
             if (state.type === "BUY") {
               state.tp = (livePrice + (spreadOffset * 2)).toFixed(marketDef.digits);
@@ -448,23 +540,6 @@
             } else {
               state.tp = (livePrice - (spreadOffset * 2)).toFixed(marketDef.digits);
               state.sl = (livePrice + spreadOffset).toFixed(marketDef.digits);
-            }
-
-            state.trendLockTicks--;
-            if (state.trendLockTicks <= 0) {
-              state.type = Math.random() > 0.5 ? "BUY" : "SELL";
-              state.trendLockTicks = Math.floor(Math.random() * 10) + 5;
-              if (state.type === "BUY") {
-                state.rsi = Math.floor(Math.random() * 20) + 22;
-                state.macd = "Bullish Cross";
-                state.score = Math.floor(Math.random() * 12) + 82;
-              } else {
-                state.rsi = Math.floor(Math.random() * 20) + 58;
-                state.macd = "Bearish Cross";
-                state.score = Math.floor(Math.random() * 12) + 82;
-              }
-            } else {
-              state.score = Math.max(40, state.score + (Math.floor(Math.random() * 5) - 2));
             }
 
             updateUIElements();
